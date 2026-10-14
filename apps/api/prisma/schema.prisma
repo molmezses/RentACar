@@ -1,0 +1,24 @@
+
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum TenantStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+model Tenant {
+  id        String       @id @default(cuid())
+  name      String                                 // normal isim : mustafa RentACar 
+  slug      String       @unique                    // slug ise normal isim yerine urllerde kullabilecek kısa tanımlayıcı : mustafa-rentacar
+  status    TenantStatus @default(PENDING)        // default olarak pending atanıyor 
+  createdAt DateTime     @default(now())          // ileride abonelik bitimi için klullanuclak 
+  updatedAt DateTime     @updatedAt
+}

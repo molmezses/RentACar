@@ -1,4 +1,4 @@
-import {Catch, ConflictException , Injectable } from '@nestjs/common';
+import { ConflictException , Injectable } from '@nestjs/common';
 import { Prisma } from '../../generated/prisma/client.js';
 import { PrismaService } from "../prisma/prisma.service.js";
 import { CreateTenantDto} from "./dto/create-tenant.dto.js";

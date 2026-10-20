@@ -8,4 +8,6 @@ import { TenantsService } from './tenants.service.js';
   controllers: [TenantsController],
   providers: [TenantsService]
 })
-export class TenantsModule {}
+export class TenantsModule {
+  
+}

@@ -1,4 +1,3 @@
-
 generator client {
   provider = "prisma-client"
   output   = "../generated/prisma"
@@ -14,11 +13,34 @@ enum TenantStatus {
   REJECTED
 }
 
+enum TenantApplicationStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
 model Tenant {
   id        String       @id @default(cuid())
-  name      String                                 // normal isim : mustafa RentACar 
-  slug      String       @unique                    // slug ise normal isim yerine urllerde kullabilecek kısa tanımlayıcı : mustafa-rentacar
-  status    TenantStatus @default(PENDING)        // default olarak pending atanıyor 
-  createdAt DateTime     @default(now())          // ileride abonelik bitimi için klullanuclak 
+  name      String
+  slug      String       @unique
+  status    TenantStatus @default(PENDING)
+  createdAt DateTime     @default(now())
   updatedAt DateTime     @updatedAt
+
+  application TenantApplication?
+}
+
+model TenantApplication {
+  id           String                  @id @default(cuid())
+  companyName  String
+  slug         String
+  contactName  String
+  contactEmail String
+  contactPhone String
+  status       TenantApplicationStatus @default(PENDING)
+  createdAt    DateTime                @default(now())
+  updatedAt    DateTime                @updatedAt
+
+  tenantId String? @unique
+  tenant   Tenant? @relation(fields: [tenantId], references: [id])
 }

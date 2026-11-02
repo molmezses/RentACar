@@ -21,6 +21,7 @@ async function bootstrap() {
       'RentACar multi-tenant car rental platform API documentation.',
     )
     .setVersion('1.0.0')
+    .addBearerAuth()
     .build();
 
   const documentFactory = () =>

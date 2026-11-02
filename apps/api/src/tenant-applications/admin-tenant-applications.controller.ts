@@ -1,0 +1,36 @@
+import {
+  Controller,
+  Get,
+  UseGuards,
+} from '@nestjs/common';
+
+import {
+  ApiBearerAuth,
+  ApiOkResponse,
+  ApiOperation,
+  ApiTags,
+} from '@nestjs/swagger';
+
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard.js';
+import { TenantApplicationsService } from './tenant-applications.service.js';
+
+@ApiTags('Admin - Tenant Applications')
+@ApiBearerAuth()
+@UseGuards(JwtAuthGuard)
+@Controller('admin/tenant-applications')
+export class AdminTenantApplicationsController {
+  constructor(
+    private readonly tenantApplicationsService: TenantApplicationsService,
+  ) {}
+
+  @Get()
+  @ApiOperation({
+    summary: 'Şirket başvurularını listele (Super Admin)',
+  })
+  @ApiOkResponse({
+    description: 'En yeni 50 şirket başvurusu listelendi.',
+  })
+  async findAll() {
+    return this.tenantApplicationsService.findAllForAdmin();
+  }
+}

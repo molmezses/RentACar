@@ -70,4 +70,33 @@ export class AdminTenantApplicationsController {
 async approve(@Param('id') id: string) {
   return this.tenantApplicationsService.approveApplication(id);
 }
+
+
+
+@Patch(':id/reject')
+@ApiOperation({
+  summary: 'Şirket başvurusunu reddet (Super Admin)',
+  description:
+    'Yalnızca PENDING durumundaki başvuruları reddeder. Tenant oluşturmaz.',
+})
+@ApiParam({
+  name: 'id',
+  description: 'Reddedilecek şirket başvurusunun ID değeri',
+  type: String,
+})
+@ApiOkResponse({
+  description: 'Şirket başvurusu başarıyla reddedildi.',
+})
+@ApiUnauthorizedResponse({
+  description: 'Geçersiz veya eksik Super Admin JWT.',
+})
+@ApiNotFoundResponse({
+  description: 'Şirket başvurusu bulunamadı.',
+})
+@ApiConflictResponse({
+  description: 'Başvuru daha önce işleme alınmış.',
+})
+async reject(@Param('id') id: string) {
+  return this.tenantApplicationsService.rejectApplication(id);
+}
 }

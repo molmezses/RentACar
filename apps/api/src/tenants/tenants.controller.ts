@@ -1,44 +1,43 @@
-import { Body, Controller, Get, Post } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  UseGuards,
+} from '@nestjs/common';
+
+import {
+  ApiBearerAuth,
+  ApiOperation,
+  ApiResponse,
+  ApiTags,
+  ApiUnauthorizedResponse,
+} from '@nestjs/swagger';
+
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard.js';
 import { TenantsService } from './tenants.service.js';
-import { CreateTenantDto } from './dto/create-tenant.dto.js';
-import { ApiOperation, ApiTags, ApiResponse } from '@nestjs/swagger';
 
 @ApiTags('Tenants')
+@ApiBearerAuth()
+@UseGuards(JwtAuthGuard)
 @Controller('tenants')
 export class TenantsController {
-  constructor(private readonly tenantsService: TenantsService) {}
+  constructor(
+    private readonly tenantsService: TenantsService,
+  ) {}
 
   @Get()
   @ApiOperation({
-    summary: 'List all tenants',
-    description: 'Returns all registered car rental companies.',
+    summary: 'List all tenants (Super Admin)',
+    description:
+      'Returns all registered companies. Requires platform admin authentication.',
   })
   @ApiResponse({
     status: 200,
-    description: 'Tenants retrived successfully.',
+    description: 'Tenants retrieved successfully.',
+  })
+  @ApiUnauthorizedResponse({
+    description: 'Missing or invalid platform admin token.',
   })
   findAll() {
     return this.tenantsService.findAll();
-  }
-
-  @Post()
-  @ApiResponse({
-    status: 201,
-    description: 'Tenant created successfully.',
-  })
-  @ApiResponse({
-    status: 400,
-    description: 'Invalid tenant data.',
-  })
-  @ApiResponse({
-    status: 409,
-    description: 'A tenant with this slug already exists.',
-  })
-  @ApiOperation({
-    summary: 'Create a new tenant.',
-    description: 'Registers a new car rental company with PENDING status.',
-  })
-  create(@Body() createTenantDto: CreateTenantDto) {
-    return this.tenantsService.create(createTenantDto);
   }
 }

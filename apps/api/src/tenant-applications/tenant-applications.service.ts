@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { CreateTenantApplicationDto } from './dto/create-tenant-application.dto.js';
+import type { ApplicationStatusFilter } from './dto/list-tenant-applications-query.dto.js';
 
 @Injectable()
 export class TenantApplicationsService {
@@ -18,12 +19,16 @@ export class TenantApplicationsService {
     });
   }
 
-  async findAllForAdmin() {
+  async findAllForAdmin(status?: ApplicationStatusFilter) {
   return this.prisma.tenantApplication.findMany({
+    ...(status ? { where: { status } } : {}),
+
     orderBy: {
       createdAt: 'desc',
     },
+
     take: 50,
+
     select: {
       id: true,
       companyName: true,

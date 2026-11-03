@@ -58,6 +58,33 @@ describe('TenantApplicationsService - Admin Listing', () => {
     expect(result).toEqual(applications);
   });
 
+  it('status gönderildiğinde başvuruları filtreler', async () => {
+  const applications = [
+    {
+      id: 'application-1',
+      status: 'PENDING',
+    },
+  ];
+
+  findMany.mockResolvedValue(applications);
+
+  const result = await service.findAllForAdmin('PENDING');
+
+  expect(findMany).toHaveBeenCalledWith(
+    expect.objectContaining({
+      where: {
+        status: 'PENDING',
+      },
+      orderBy: {
+        createdAt: 'desc',
+      },
+      take: 50,
+    }),
+  );
+
+  expect(result).toEqual(applications);
+});
+
   it('başvuru bulunamadığında boş liste döndürür', async () => {
     findMany.mockResolvedValue([]);
 

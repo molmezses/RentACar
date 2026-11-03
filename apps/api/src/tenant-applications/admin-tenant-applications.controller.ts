@@ -1,6 +1,7 @@
 import {
   Controller,
   Get,
+  Query,
   UseGuards,
 } from '@nestjs/common';
 
@@ -13,6 +14,7 @@ import {
 
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard.js';
 import { TenantApplicationsService } from './tenant-applications.service.js';
+import { ListTenantApplicationsQueryDto } from './dto/list-tenant-applications-query.dto.js';
 
 @ApiTags('Admin - Tenant Applications')
 @ApiBearerAuth()
@@ -30,7 +32,11 @@ export class AdminTenantApplicationsController {
   @ApiOkResponse({
     description: 'En yeni 50 şirket başvurusu listelendi.',
   })
-  async findAll() {
-    return this.tenantApplicationsService.findAllForAdmin();
+  async findAll(
+    @Query() query : ListTenantApplicationsQueryDto,
+  ) {
+    return this.tenantApplicationsService.findAllForAdmin(
+      query.status,
+    );
   }
 }

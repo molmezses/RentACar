@@ -3,13 +3,19 @@ import {
   Get,
   Query,
   UseGuards,
+  Patch,
+  Param
 } from '@nestjs/common';
 
 import {
   ApiBearerAuth,
+  ApiConflictResponse,
+  ApiNotFoundResponse,
   ApiOkResponse,
   ApiOperation,
+  ApiParam,
   ApiTags,
+  ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
 
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard.js';
@@ -36,7 +42,32 @@ export class AdminTenantApplicationsController {
     @Query() query : ListTenantApplicationsQueryDto,
   ) {
     return this.tenantApplicationsService.findAllForAdmin(
-      query.status,
+      query.status
     );
   }
+
+  @Patch(':id/approve')
+@ApiOperation({
+  summary: 'Şirket başvurusunu onayla (Super Admin)',
+})
+@ApiParam({
+  name: 'id',
+  description: 'Onaylanacak şirket başvurusunun ID değeri',
+  type: String,
+})
+@ApiOkResponse({
+  description: 'Başvuru onaylandı ve Tenant oluşturuldu.',
+})
+@ApiUnauthorizedResponse({
+  description: 'Geçersiz veya eksik JWT.',
+})
+@ApiNotFoundResponse({
+  description: 'Şirket başvurusu bulunamadı.',
+})
+@ApiConflictResponse({
+  description: 'Başvuru daha önce işlenmiş veya slug kullanılıyor.',
+})
+async approve(@Param('id') id: string) {
+  return this.tenantApplicationsService.approveApplication(id);
+}
 }

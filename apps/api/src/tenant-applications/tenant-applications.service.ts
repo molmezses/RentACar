@@ -1,4 +1,9 @@
-import { Injectable } from '@nestjs/common';
+import {
+  Injectable,
+  ConflictException,
+  NotFoundException,
+} from '@nestjs/common';
+import { Prisma } from '../../generated/prisma/client.js';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { CreateTenantApplicationDto } from './dto/create-tenant-application.dto.js';
 import type { ApplicationStatusFilter } from './dto/list-tenant-applications-query.dto.js';
@@ -42,5 +47,84 @@ export class TenantApplicationsService {
       updatedAt: true,
     },
   });
+}
+
+async approveApplication(id: string) {
+  try {
+    return await this.prisma.$transaction(async (tx) => {
+      // 1. Başvuruyu bul.
+      const application = await tx.tenantApplication.findUnique({
+        where: { id },
+      });
+
+      if (!application) {
+        throw new NotFoundException(
+          'Şirket başvurusu bulunamadı.',
+        );
+      }
+
+      // 2. Yalnızca bekleyen başvurular onaylanabilir.
+      if (
+        application.status !== 'PENDING' ||
+        application.tenantId !== null
+      ) {
+        throw new ConflictException(
+          'Bu başvuru daha önce işleme alınmış.',
+        );
+      }
+
+      // 3. Başvuruyu koşullu olarak onayla.
+      const claimed = await tx.tenantApplication.updateMany({
+        where: {
+          id,
+          status: 'PENDING',
+          tenantId: null,
+        },
+        data: {
+          status: 'APPROVED',
+        },
+      });
+
+      if (claimed.count !== 1) {
+        throw new ConflictException(
+          'Başvuru başka bir işlem tarafından güncellendi.',
+        );
+      }
+
+      // 4. Şirketin Tenant kaydını oluştur.
+      const tenant = await tx.tenant.create({
+        data: {
+          name: application.companyName,
+          slug: application.slug,
+          status: 'APPROVED',
+        },
+      });
+
+      // 5. Başvuruyu oluşturulan Tenant ile ilişkilendir.
+      const updatedApplication =
+        await tx.tenantApplication.update({
+          where: { id },
+          data: {
+            tenantId: tenant.id,
+          },
+        });
+
+      return {
+        application: updatedApplication,
+        tenant,
+      };
+    });
+  } catch (error) {
+    if (
+      error instanceof Prisma.PrismaClientKnownRequestError &&
+      error.code === 'P2002'
+    ) {
+      throw new ConflictException(
+        'Bu şirket slug değeri zaten kullanılıyor.',
+      );
+    }
+
+    throw error;
+  }
 }
 }

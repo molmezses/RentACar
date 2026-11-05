@@ -2,6 +2,7 @@ import { Body, Controller, Post } from '@nestjs/common';
 import { TenantApplicationsService } from './tenant-applications.service.js';
 import { CreateTenantApplicationDto } from './dto/create-tenant-application.dto.js';
 import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { TenantApplicationResponseDto } from './dto/tenant-application-response.dto.js';
 
 @ApiTags('Tenant Applications')
 @Controller('tenant-applications')
@@ -17,6 +18,7 @@ export class TenantApplicationsController {
   @ApiResponse({
     status: 201,
     description: 'Tenant application submitted successfully.',
+    type: TenantApplicationResponseDto,
   })
   @ApiResponse({
     status: 400,

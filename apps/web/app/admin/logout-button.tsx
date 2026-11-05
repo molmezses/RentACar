@@ -34,18 +34,17 @@ export default function LogoutButton() {
   }
 
   return (
-    <div className="mt-6">
+      <div className="flex flex-col items-start gap-2">
       <button
         type="button"
         onClick={handleLogout}
         disabled={isLoading}
-        className="rounded-lg bg-red-600 px-5 py-3 font-medium text-white hover:bg-red-700 disabled:opacity-60"
-      >
+        className="rounded-lg bg-red-600 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-red-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-600 disabled:cursor-not-allowed disabled:opacity-60">
         {isLoading ? "Çıkış yapılıyor..." : "Çıkış Yap"}
       </button>
 
       {error && (
-        <p role="alert" className="mt-3 text-sm text-red-700">
+        <p role="alert" className="max-w-60 text-sm text-red-700">
           {error}
         </p>
       )}

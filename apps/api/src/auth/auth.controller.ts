@@ -21,6 +21,8 @@ import {
 
 import { AuthService } from './auth.service.js';
 import { LoginDto } from './dto/login.dto.js';
+import { LoginResponseDto } from './dto/login-response.dto.js';
+import { PlatformAdminResponseDto } from './dto/platform-admin-response.dto.js';
 
 @ApiTags('Authentication')
 @Controller('auth')
@@ -38,6 +40,7 @@ export class AuthController {
   @ApiResponse({
     status: 200,
     description: 'Giriş başarılı, JWT oluşturuldu.',
+    type: LoginResponseDto,
   })
   @ApiResponse({
     status: 400,
@@ -61,6 +64,7 @@ export class AuthController {
 @ApiResponse({
   status: 200,
   description: 'Yönetici bilgileri başarıyla getirildi.',
+  type: PlatformAdminResponseDto,
 })
 @ApiResponse({
   status: 401,

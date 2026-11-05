@@ -12,18 +12,29 @@ import {
   ApiConflictResponse,
   ApiNotFoundResponse,
   ApiOkResponse,
+  ApiExtraModels,
   ApiOperation,
   ApiParam,
   ApiTags,
   ApiUnauthorizedResponse,
+  ApiBadRequestResponse,
+  getSchemaPath,
 } from '@nestjs/swagger';
 
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard.js';
 import { TenantApplicationsService } from './tenant-applications.service.js';
 import { ListTenantApplicationsQueryDto } from './dto/list-tenant-applications-query.dto.js';
+import { TenantApplicationResponseDto } from './dto/tenant-application-response.dto.js';
+import { ApproveTenantApplicationResponseDto } from './dto/approve-tenant-application-response.dto.js';
+import { TenantResponseDto } from './dto/tenant-response.dto.js';
 
 @ApiTags('Admin - Tenant Applications')
 @ApiBearerAuth()
+@ApiExtraModels(
+  ApproveTenantApplicationResponseDto,
+  TenantApplicationResponseDto,
+  TenantResponseDto,
+)
 @UseGuards(JwtAuthGuard)
 @Controller('admin/tenant-applications')
 export class AdminTenantApplicationsController {
@@ -36,8 +47,18 @@ export class AdminTenantApplicationsController {
     summary: 'Şirket başvurularını listele (Super Admin)',
   })
   @ApiOkResponse({
-    description: 'En yeni 50 şirket başvurusu listelendi.',
-  })
+     description: 'En yeni 50 şirket başvurusu listelendi.',
+  type: TenantApplicationResponseDto,
+  isArray: true,
+})
+@ApiUnauthorizedResponse({
+  description: 'Geçersiz veya eksik Super Admin JWT.',
+})
+@ApiBadRequestResponse({
+  description:
+    'Geçersiz status filtresi. PENDING, APPROVED veya REJECTED kullanılmalıdır.',
+})
+
   async findAll(
     @Query() query : ListTenantApplicationsQueryDto,
   ) {
@@ -57,6 +78,35 @@ export class AdminTenantApplicationsController {
 })
 @ApiOkResponse({
   description: 'Başvuru onaylandı ve Tenant oluşturuldu.',
+  schema: {
+    allOf: [
+      {
+        $ref: getSchemaPath(ApproveTenantApplicationResponseDto),
+      },
+    ],
+    example: {
+      application: {
+        id: 'application-123',
+        companyName: 'Eda RentACar',
+        slug: 'eda-rentacar',
+        contactName: 'Eda Demir',
+        contactEmail: 'eda@example.com',
+        contactPhone: '+905321234567',
+        status: 'APPROVED',
+        tenantId: 'tenant-456',
+        createdAt: '2026-11-05T10:00:00.000Z',
+        updatedAt: '2026-11-05T10:05:00.000Z',
+      },
+      tenant: {
+        id: 'tenant-456',
+        name: 'Eda RentACar',
+        slug: 'eda-rentacar',
+        status: 'APPROVED',
+        createdAt: '2026-11-05T10:05:00.000Z',
+        updatedAt: '2026-11-05T10:05:00.000Z',
+      },
+    },
+  },
 })
 @ApiUnauthorizedResponse({
   description: 'Geçersiz veya eksik JWT.',
@@ -86,6 +136,25 @@ async approve(@Param('id') id: string) {
 })
 @ApiOkResponse({
   description: 'Şirket başvurusu başarıyla reddedildi.',
+  schema: {
+    allOf: [
+      {
+        $ref: getSchemaPath(TenantApplicationResponseDto),
+      },
+    ],
+    example: {
+      id: 'cm1234567890abcdef',
+      companyName: 'Eda RentACar',
+      slug: 'eda-rentacar',
+      contactName: 'Eda Demir',
+      contactEmail: 'eda@example.com',
+      contactPhone: '+905321234567',
+      status: 'REJECTED',
+      tenantId: null,
+      createdAt: '2026-11-05T10:00:00.000Z',
+      updatedAt: '2026-11-05T10:00:00.000Z',
+    },
+  },
 })
 @ApiUnauthorizedResponse({
   description: 'Geçersiz veya eksik Super Admin JWT.',

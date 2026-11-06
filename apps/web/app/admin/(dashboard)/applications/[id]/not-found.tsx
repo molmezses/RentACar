@@ -1,4 +1,3 @@
-
 import Link from "next/link";
 
 export default function ApplicationNotFound() {
@@ -14,12 +13,10 @@ export default function ApplicationNotFound() {
         </p>
 
         <Link
-          href="/admin"
+          href="/admin/applications"
           className="mt-6 inline-block rounded-lg bg-slate-900 px-5 py-3 text-sm font-medium text-white"
         >
-          
-        ← Dashboard
-  
+          Başvurulara Dön
         </Link>
       </div>
     </main>

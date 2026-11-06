@@ -115,3 +115,108 @@ return {
 };
 
 }
+
+
+export type TenantApplicationDetailResult =
+  | { ok: true; application: TenantApplication }
+  | {
+      ok: false;
+      kind: "not-found" | "forbidden" | "error";
+      error: string;
+    };
+
+export async function getTenantApplicationById(
+  id: string,
+): Promise<TenantApplicationDetailResult> {
+  if (!id || id.length > 128) {
+    return {
+      ok: false,
+      kind: "not-found",
+      error: "Başvuru bulunamadı.",
+    };
+  }
+
+  const cookieStore = await cookies();
+  const token = cookieStore.get(
+    "rentacar_admin_session",
+  )?.value;
+
+  if (!token) {
+    redirect("/admin/login");
+  }
+
+  const apiUrl =
+    process.env.API_INTERNAL_URL ??
+    "http://localhost:3001";
+
+  const url = new URL(
+    `/admin/tenant-applications/${encodeURIComponent(id)}`,
+    apiUrl,
+  );
+
+  let response: Response;
+
+  try {
+    response = await fetch(url.toString(), {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+      cache: "no-store",
+      signal: AbortSignal.timeout(10000),
+    });
+  } catch {
+    return {
+      ok: false,
+      kind: "error",
+      error: "Başvuru bilgilerine şu anda ulaşılamıyor.",
+    };
+  }
+
+  if (response.status === 401) {
+    redirect("/admin/login");
+  }
+
+  if (response.status === 404) {
+    return {
+      ok: false,
+      kind: "not-found",
+      error: "Başvuru bulunamadı.",
+    };
+  }
+
+  if (response.status === 403) {
+    return {
+      ok: false,
+      kind: "forbidden",
+      error: "Bu başvuruyu görüntüleme yetkiniz yok.",
+    };
+  }
+
+  if (!response.ok) {
+    return {
+      ok: false,
+      kind: "error",
+      error: "Başvuru bilgileri alınamadı.",
+    };
+  }
+
+  const data: unknown = await response
+    .json()
+    .catch(() => null);
+
+  if (
+    !isTenantApplication(data) ||
+    data.id !== id
+  ) {
+    return {
+      ok: false,
+      kind: "error",
+      error: "Sunucudan geçersiz başvuru verisi alındı.",
+    };
+  }
+
+  return {
+    ok: true,
+    application: data,
+  };
+}

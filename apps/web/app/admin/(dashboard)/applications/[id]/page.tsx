@@ -1,4 +1,3 @@
-
 import { Suspense } from "react";
 import Link from "next/link";
 import { cookies } from "next/headers";
@@ -28,14 +27,8 @@ type DetailPageProps = {
   params: Promise<{ id: string }>;
 };
 
-function isTenantApplication(
-  value: unknown,
-): value is TenantApplication {
-  if (
-    typeof value !== "object" ||
-    value === null ||
-    Array.isArray(value)
-  ) {
+function isTenantApplication(value: unknown): value is TenantApplication {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) {
     return false;
   }
 
@@ -48,11 +41,8 @@ function isTenantApplication(
     typeof data.contactName === "string" &&
     typeof data.contactEmail === "string" &&
     typeof data.contactPhone === "string" &&
-    ["PENDING", "APPROVED", "REJECTED"].includes(
-      String(data.status),
-    ) &&
-    (data.tenantId === null ||
-      typeof data.tenantId === "string") &&
+    ["PENDING", "APPROVED", "REJECTED"].includes(String(data.status)) &&
+    (data.tenantId === null || typeof data.tenantId === "string") &&
     typeof data.createdAt === "string" &&
     typeof data.updatedAt === "string" &&
     !Number.isNaN(Date.parse(data.createdAt)) &&
@@ -68,9 +58,7 @@ function formatDate(value: string) {
   }).format(new Date(value));
 }
 
-async function ApplicationDetail({
-  params,
-}: DetailPageProps) {
+async function ApplicationDetail({ params }: DetailPageProps) {
   const session = await getAdminSession();
 
   if (!session.ok) {
@@ -89,17 +77,13 @@ async function ApplicationDetail({
   }
 
   const cookieStore = await cookies();
-  const token = cookieStore.get(
-    "rentacar_admin_session",
-  )?.value;
+  const token = cookieStore.get("rentacar_admin_session")?.value;
 
   if (!token) {
     redirect("/admin/login");
   }
 
-  const apiUrl =
-    process.env.API_INTERNAL_URL ??
-    "http://localhost:3001";
+  const apiUrl = process.env.API_INTERNAL_URL ?? "http://localhost:3001";
 
   let response: Response;
 
@@ -149,9 +133,7 @@ async function ApplicationDetail({
     );
   }
 
-  const data: unknown = await response
-    .json()
-    .catch(() => null);
+  const data: unknown = await response.json().catch(() => null);
 
   if (!isTenantApplication(data) || data.id !== id) {
     return (
@@ -182,10 +164,10 @@ async function ApplicationDetail({
   return (
     <div className="space-y-6">
       <Link
-        href="/admin"
+        href="/admin/applications"
         className="inline-block text-sm font-medium text-slate-600 hover:text-slate-900"
       >
-        ← Dashboard
+        ← Back Applications
       </Link>
 
       <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
@@ -210,9 +192,7 @@ async function ApplicationDetail({
         <dl className="mt-8 grid gap-6 border-t border-slate-200 pt-8 sm:grid-cols-2">
           {fields.map((field) => (
             <div key={field.label} className="min-w-0">
-              <dt className="text-sm text-slate-500">
-                {field.label}
-              </dt>
+              <dt className="text-sm text-slate-500">{field.label}</dt>
               <dd className="mt-1 break-words font-medium text-slate-900">
                 {field.value}
               </dd>
@@ -224,15 +204,11 @@ async function ApplicationDetail({
   );
 }
 
-export default function ApplicationDetailPage({
-  params,
-}: DetailPageProps) {
+export default function ApplicationDetailPage({ params }: DetailPageProps) {
   return (
     <main className="p-4 sm:p-8">
       <Suspense
-        fallback={
-          <LoadingState message="Başvuru detayları yükleniyor..." />
-        }
+        fallback={<LoadingState message="Başvuru detayları yükleniyor..." />}
       >
         <ApplicationDetail params={params} />
       </Suspense>

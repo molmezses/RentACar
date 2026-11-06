@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Suspense } from "react";
 import LogoutButton from "../logout-button";
 import AdminMobileNav from "./mobile-nav";
 
@@ -20,7 +21,9 @@ export default function AdminHeader() {
         </div>
 
         <div className="flex items-center justify-between gap-3 sm:justify-end">
-          <AdminMobileNav />
+          <Suspense fallback={null}>
+      <AdminMobileNav />
+        </Suspense>
           <LogoutButton />
         </div>
       </div>

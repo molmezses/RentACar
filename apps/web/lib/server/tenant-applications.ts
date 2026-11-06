@@ -1,0 +1,117 @@
+import "server-only";
+
+import { cookies } from "next/headers";
+import { redirect } from "next/navigation";
+
+import type {
+  TenantApplication,
+  TenantApplicationStatus,
+} from "../../types/tenant-application";
+
+export type TenantApplicationsResult =
+  | { ok: true; applications: TenantApplication[] }
+  | { ok: false; error: string };
+
+
+function isTenantApplication(
+  value: unknown,
+): value is TenantApplication {
+  if (typeof value !== "object" || value === null) {
+    return false;
+  }
+
+  const application = value as Record<string, unknown>;
+
+  return (
+    typeof application.id === "string" &&
+    application.id.length > 0 &&
+    typeof application.companyName === "string" &&
+    typeof application.slug === "string" &&
+    typeof application.contactName === "string" &&
+    typeof application.contactEmail === "string" &&
+    typeof application.contactPhone === "string" &&
+    (
+      application.status === "PENDING" ||
+      application.status === "APPROVED" ||
+      application.status === "REJECTED"
+    ) &&
+    (
+      application.tenantId === null ||
+      typeof application.tenantId === "string"
+    ) &&
+    typeof application.createdAt === "string" &&
+    !Number.isNaN(Date.parse(application.createdAt)) &&
+    typeof application.updatedAt === "string" &&
+    !Number.isNaN(Date.parse(application.updatedAt))
+  );
+}
+
+export async function getTenantApplications(
+  status?: TenantApplicationStatus,
+): Promise<TenantApplicationsResult> {
+  const cookieStore = await cookies();
+  const token = cookieStore.get("rentacar_admin_session")?.value;
+
+  if (!token) {
+    redirect("/admin/login");
+  }
+
+  const apiUrl =
+    process.env.API_INTERNAL_URL ?? "http://localhost:3001";
+
+  const url = new URL(
+    "/admin/tenant-applications",
+    apiUrl,
+  );
+
+  if (status) {
+    url.searchParams.set("status", status);
+  }
+
+  let response: Response;
+
+  try {
+    response = await fetch(url.toString(), {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+      cache: "no-store",
+      signal: AbortSignal.timeout(10000),
+    });
+  } catch {
+    return {
+      ok: false,
+      error: "Şirket başvuruları alınırken sunucuya ulaşılamadı.",
+    };
+  }
+
+  if (response.status === 401) {
+    redirect("/admin/login");
+  }
+
+  if (!response.ok) {
+    return {
+      ok: false,
+      error: "Şirket başvuruları alınamadı.",
+    };
+  }
+
+  const data: unknown = await response.json().catch(() => null);
+
+
+if (
+  !Array.isArray(data) ||
+  !data.every(isTenantApplication)
+) {
+  return {
+    ok: false,
+    error: "Sunucudan geçersiz başvuru listesi alındı.",
+  };
+}
+
+return {
+  ok: true,
+  applications: data,
+};
+
+}

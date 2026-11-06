@@ -1,6 +1,16 @@
+"use client";
+
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 
 export default function AdminSidebar() {
+  const pathname = usePathname();
+
+  const links = [
+    { href: "/admin", label: "Dashboard" },
+    { href: "/admin/applications", label: "Şirket Başvuruları" },
+  ];
+
   return (
     <aside
       aria-label="Yönetim menüsü"
@@ -15,14 +25,25 @@ export default function AdminSidebar() {
         </p>
       </div>
 
-      <nav aria-label="Ana navigasyon">
-        <Link
-          href="/admin"
-          aria-current="page"
-          className="block rounded-lg bg-slate-900 px-4 py-3 text-sm font-medium text-white"
-        >
-          Dashboard
-        </Link>
+      <nav aria-label="Ana navigasyon" className="space-y-2">
+        {links.map((link) => {
+          const isActive = pathname === link.href;
+
+          return (
+            <Link
+              key={link.href}
+              href={link.href}
+              aria-current={isActive ? "page" : undefined}
+              className={
+                isActive
+                  ? "block rounded-lg bg-slate-900 px-4 py-3 text-sm font-medium text-white"
+                  : "block rounded-lg px-4 py-3 text-sm font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-900"
+              }
+            >
+              {link.label}
+            </Link>
+          );
+        })}
       </nav>
     </aside>
   );

@@ -4,7 +4,7 @@ import {
   Query,
   UseGuards,
   Patch,
-  Param
+  Param,
 } from '@nestjs/common';
 
 import {
@@ -47,125 +47,143 @@ export class AdminTenantApplicationsController {
     summary: 'Şirket başvurularını listele (Super Admin)',
   })
   @ApiOkResponse({
-     description: 'En yeni 50 şirket başvurusu listelendi.',
-  type: TenantApplicationResponseDto,
-  isArray: true,
-})
-@ApiUnauthorizedResponse({
-  description: 'Geçersiz veya eksik Super Admin JWT.',
-})
-@ApiBadRequestResponse({
-  description:
-    'Geçersiz status filtresi. PENDING, APPROVED veya REJECTED kullanılmalıdır.',
-})
+    description: 'En yeni 50 şirket başvurusu listelendi.',
+    type: TenantApplicationResponseDto,
+    isArray: true,
+  })
+  @ApiUnauthorizedResponse({
+    description: 'Missing, invalid, or expired Super Admin JWT.',
+  })
+  @ApiBadRequestResponse({
+    description:
+      'Geçersiz status filtresi. PENDING, APPROVED veya REJECTED kullanılmalıdır.',
+  })
+  async findAll(@Query() query: ListTenantApplicationsQueryDto) {
+    return this.tenantApplicationsService.findAllForAdmin(query.status);
+  }
 
-  async findAll(
-    @Query() query : ListTenantApplicationsQueryDto,
-  ) {
-    return this.tenantApplicationsService.findAllForAdmin(
-      query.status
-    );
+  @Get(':id')
+  @ApiOperation({
+    summary: 'Get a tenant application by ID (Super Admin)',
+    description:
+      'Retrieves the details of a single tenant application. Requires Super Admin authentication',
+  })
+  @ApiParam({
+    name: 'id',
+    description: 'Unique identifier of the tenant application.',
+    type: String,
+  })
+  @ApiOkResponse({
+    description: 'Tenant application retrieved successfully.',
+    type: TenantApplicationResponseDto,
+  })
+  @ApiUnauthorizedResponse({
+    description: 'Missing, invalid, or expired Super Admin JWT.',
+  })
+  @ApiNotFoundResponse({
+    description: 'Tenant application not found.',
+  })
+  async findOne(@Param('id') id: string) {
+    return this.tenantApplicationsService.findOneForAdmin(id);
   }
 
   @Patch(':id/approve')
-@ApiOperation({
-  summary: 'Şirket başvurusunu onayla (Super Admin)',
-})
-@ApiParam({
-  name: 'id',
-  description: 'Onaylanacak şirket başvurusunun ID değeri',
-  type: String,
-})
-@ApiOkResponse({
-  description: 'Başvuru onaylandı ve Tenant oluşturuldu.',
-  schema: {
-    allOf: [
-      {
-        $ref: getSchemaPath(ApproveTenantApplicationResponseDto),
+  @ApiOperation({
+    summary: 'Şirket başvurusunu onayla (Super Admin)',
+  })
+  @ApiParam({
+    name: 'id',
+    description: 'Onaylanacak şirket başvurusunun ID değeri',
+    type: String,
+  })
+  @ApiOkResponse({
+    description: 'Başvuru onaylandı ve Tenant oluşturuldu.',
+    schema: {
+      allOf: [
+        {
+          $ref: getSchemaPath(ApproveTenantApplicationResponseDto),
+        },
+      ],
+      example: {
+        application: {
+          id: 'application-123',
+          companyName: 'Eda RentACar',
+          slug: 'eda-rentacar',
+          contactName: 'Eda Demir',
+          contactEmail: 'eda@example.com',
+          contactPhone: '+905321234567',
+          status: 'APPROVED',
+          tenantId: 'tenant-456',
+          createdAt: '2026-11-05T10:00:00.000Z',
+          updatedAt: '2026-11-05T10:05:00.000Z',
+        },
+        tenant: {
+          id: 'tenant-456',
+          name: 'Eda RentACar',
+          slug: 'eda-rentacar',
+          status: 'APPROVED',
+          createdAt: '2026-11-05T10:05:00.000Z',
+          updatedAt: '2026-11-05T10:05:00.000Z',
+        },
       },
-    ],
-    example: {
-      application: {
-        id: 'application-123',
+    },
+  })
+  @ApiUnauthorizedResponse({
+    description: 'Geçersi veya eksik JWT.',
+  })
+  @ApiNotFoundResponse({
+    description: 'Şirket başvurusu bulunamadı.',
+  })
+  @ApiConflictResponse({
+    description: 'Başvuru daha önce işlenmiş veya slug kullanılıyor.',
+  })
+  async approve(@Param('id') id: string) {
+    return this.tenantApplicationsService.approveApplication(id);
+  }
+
+  @Patch(':id/reject')
+  @ApiOperation({
+    summary: 'Şirket başvurusunu reddet (Super Admin)',
+    description:
+      'Yalnızca PENDING durumundaki başvuruları reddeder. Tenant oluşturmaz.',
+  })
+  @ApiParam({
+    name: 'id',
+    description: 'Reddedilecek şirket başvurusunun ID değeri',
+    type: String,
+  })
+  @ApiOkResponse({
+    description: 'Şirket başvurusu başarıyla reddedildi.',
+    schema: {
+      allOf: [
+        {
+          $ref: getSchemaPath(TenantApplicationResponseDto),
+        },
+      ],
+      example: {
+        id: 'cm1234567890abcdef',
         companyName: 'Eda RentACar',
         slug: 'eda-rentacar',
         contactName: 'Eda Demir',
         contactEmail: 'eda@example.com',
         contactPhone: '+905321234567',
-        status: 'APPROVED',
-        tenantId: 'tenant-456',
+        status: 'REJECTED',
+        tenantId: null,
         createdAt: '2026-11-05T10:00:00.000Z',
-        updatedAt: '2026-11-05T10:05:00.000Z',
-      },
-      tenant: {
-        id: 'tenant-456',
-        name: 'Eda RentACar',
-        slug: 'eda-rentacar',
-        status: 'APPROVED',
-        createdAt: '2026-11-05T10:05:00.000Z',
-        updatedAt: '2026-11-05T10:05:00.000Z',
+        updatedAt: '2026-11-05T10:00:00.000Z',
       },
     },
-  },
-})
-@ApiUnauthorizedResponse({
-  description: 'Geçersiz veya eksik JWT.',
-})
-@ApiNotFoundResponse({
-  description: 'Şirket başvurusu bulunamadı.',
-})
-@ApiConflictResponse({
-  description: 'Başvuru daha önce işlenmiş veya slug kullanılıyor.',
-})
-async approve(@Param('id') id: string) {
-  return this.tenantApplicationsService.approveApplication(id);
-}
-
-
-
-@Patch(':id/reject')
-@ApiOperation({
-  summary: 'Şirket başvurusunu reddet (Super Admin)',
-  description:
-    'Yalnızca PENDING durumundaki başvuruları reddeder. Tenant oluşturmaz.',
-})
-@ApiParam({
-  name: 'id',
-  description: 'Reddedilecek şirket başvurusunun ID değeri',
-  type: String,
-})
-@ApiOkResponse({
-  description: 'Şirket başvurusu başarıyla reddedildi.',
-  schema: {
-    allOf: [
-      {
-        $ref: getSchemaPath(TenantApplicationResponseDto),
-      },
-    ],
-    example: {
-      id: 'cm1234567890abcdef',
-      companyName: 'Eda RentACar',
-      slug: 'eda-rentacar',
-      contactName: 'Eda Demir',
-      contactEmail: 'eda@example.com',
-      contactPhone: '+905321234567',
-      status: 'REJECTED',
-      tenantId: null,
-      createdAt: '2026-11-05T10:00:00.000Z',
-      updatedAt: '2026-11-05T10:00:00.000Z',
-    },
-  },
-})
-@ApiUnauthorizedResponse({
-  description: 'Geçersiz veya eksik Super Admin JWT.',
-})
-@ApiNotFoundResponse({
-  description: 'Şirket başvurusu bulunamadı.',
-})
-@ApiConflictResponse({
-  description: 'Başvuru daha önce işleme alınmış.',
-})
-async reject(@Param('id') id: string) {
-  return this.tenantApplicationsService.rejectApplication(id);
-}
+  })
+  @ApiUnauthorizedResponse({
+    description: 'Geçersiz veya eksik Super Admin JWT.',
+  })
+  @ApiNotFoundResponse({
+    description: 'Şirket başvurusu bulunamadı.',
+  })
+  @ApiConflictResponse({
+    description: 'Başvuru daha önce işleme alınmış.',
+  })
+  async reject(@Param('id') id: string) {
+    return this.tenantApplicationsService.rejectApplication(id);
+  }
 }

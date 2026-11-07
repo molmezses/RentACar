@@ -28,6 +28,7 @@ model Tenant {
   updatedAt DateTime     @updatedAt
 
   application TenantApplication?
+  admin       TenantAdmin?
 }
 
 model TenantApplication {
@@ -51,4 +52,71 @@ model PlatformAdmin {
   passwordHash String
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
+}
+
+model TenantAdmin {
+  id           String  @id @default(cuid())
+  tenantId     String  @unique
+  email        String  @unique
+  passwordHash String?
+
+  emailVerifiedAt DateTime?
+  activatedAt     DateTime?
+  disabledAt      DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+
+  activationTokens     TenantActivationToken[]
+  invitationDeliveries InvitationDelivery[]
+}
+
+model TenantActivationToken {
+  id            String    @id @default(cuid())
+  tenantAdminId String
+  tokenHash     String    @unique
+  expiresAt     DateTime
+  consumedAt    DateTime?
+  createdAt     DateTime  @default(now())
+
+  tenantAdmin TenantAdmin @relation(fields: [tenantAdminId], references: [id], onDelete: Restrict)
+
+  delivery InvitationDelivery?
+
+  @@index([tenantAdminId, expiresAt])
+}
+
+enum InvitationDeliveryStatus {
+  PENDING
+  PROCESSING
+  SENT
+  FAILED
+}
+
+model InvitationDelivery {
+  id                String                   @id @default(cuid())
+  tenantAdminId     String
+  activationTokenId String                   @unique
+  recipientEmail    String
+  encryptedToken    String?
+  status            InvitationDeliveryStatus @default(PENDING)
+
+  attempts      Int       @default(0)
+  nextAttemptAt DateTime?
+  lockedUntil   DateTime?
+  sentAt        DateTime?
+  lastErrorCode String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tenantAdmin TenantAdmin @relation(fields: [tenantAdminId], references: [id], onDelete: Restrict)
+
+  activationToken TenantActivationToken @relation(fields: [activationTokenId], references: [id], onDelete: Restrict)
+
+  @@index([status, nextAttemptAt])
+  @@index([status, lockedUntil])
+  @@index([tenantAdminId])
 }

@@ -1,7 +1,9 @@
 
+//Başvuru detay sayfasını gösterir
 import { Suspense } from "react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import ApplicationActions from "./application-actions";
 
 import { getAdminSession } from "../../admin-session";
 import { getTenantApplicationById } from "../../../../../lib/server/tenant-applications";
@@ -149,6 +151,11 @@ async function ApplicationDetail({
             </div>
           ))}
         </dl>
+       <ApplicationActions
+  applicationId={application.id}
+  companyName={application.companyName}
+  status={application.status}
+/>
       </section>
     </div>
   );

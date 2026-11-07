@@ -46,6 +46,7 @@ function isTenantApplication(
   );
 }
 
+//Başvuru listesini getirir
 export async function getTenantApplications(
   status?: TenantApplicationStatus,
 ): Promise<TenantApplicationsResult> {
@@ -125,6 +126,7 @@ export type TenantApplicationDetailResult =
       error: string;
     };
 
+//Belirli başvurunun detayını getirir    
 export async function getTenantApplicationById(
   id: string,
 ): Promise<TenantApplicationDetailResult> {

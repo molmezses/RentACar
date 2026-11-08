@@ -148,4 +148,25 @@ describe('JwtAuthGuard', () => {
       },
     });
   });
+
+
+  it('veritabanı hatasını JWT hatası gibi göstermez', async () => {
+    // JWT geçerli.
+    verifyAsync.mockResolvedValue({
+      sub: 'admin-123',
+      type: 'platform_admin',
+    });
+
+    // Veritabanı sorgusu başarısız oluyor.
+    const databaseError = new Error('Database connection failed');
+    findUnique.mockRejectedValue(databaseError);
+
+    const { context } = createContext('Bearer valid-token');
+
+    // Hata 401'e dönüştürülmeden iletilmeli.
+    await expect(
+      guard.canActivate(context),
+    ).rejects.toBe(databaseError);
+  });
+
 });

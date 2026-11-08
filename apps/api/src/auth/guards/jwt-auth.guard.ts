@@ -40,37 +40,47 @@ export class JwtAuthGuard implements CanActivate {
       throw new UnauthorizedException('Geçersiz token formatı.');
     }
 
+
+    // 1. Yalnızca JWT doğrulamasındaki hataları yakala.
+    let payload: unknown;
+
     try {
-      const payload: unknown = await this.jwtService.verifyAsync(token);
-
-      if (
-        typeof payload !== 'object' ||
-        payload === null ||
-        !('sub' in payload) ||
-        typeof payload.sub !== 'string' ||
-        !('type' in payload) ||
-        payload.type !== 'platform_admin'
-      ) {
-        throw new UnauthorizedException('Geçersiz token içeriği.');
-      }
-
-      const admin = await this.prisma.platformAdmin.findUnique({
-        where: { id: payload.sub },
-        select: {
-          id: true,
-          email: true,
-        },
-      });
-
-      if (!admin) {
-        throw new UnauthorizedException('Yönetici bulunamadı.');
-      }
-
-      request.platformAdmin = admin;
-
-      return true;
+      payload = await this.jwtService.verifyAsync(token);
     } catch {
-      throw new UnauthorizedException('Geçersiz veya süresi dolmuş token.');
+      throw new UnauthorizedException(
+        'Geçersiz veya süresi dolmuş token.',
+      );
     }
+
+    // 2. JWT içerisindeki kullanıcı bilgilerini kontrol et.
+    if (
+      typeof payload !== 'object' ||
+      payload === null ||
+      !('sub' in payload) ||
+      typeof payload.sub !== 'string' ||
+      !('type' in payload) ||
+      payload.type !== 'platform_admin'
+    ) {
+      throw new UnauthorizedException('Geçersiz token içeriği.');
+    }
+
+    // 3. Admin gerçekten veritabanında var mı?
+    const admin = await this.prisma.platformAdmin.findUnique({
+      where: { id: payload.sub },
+      select: {
+        id: true,
+        email: true,
+      },
+    });
+
+    if (!admin) {
+      throw new UnauthorizedException('Yönetici bulunamadı.');
+    }
+
+    // 4. Doğrulanan admin bilgisini isteğe ekle.
+    request.platformAdmin = admin;
+
+    return true;
+
   }
 }

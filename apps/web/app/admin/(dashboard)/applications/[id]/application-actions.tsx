@@ -91,11 +91,24 @@ export default function ApplicationActions({
           : "İşlem sonucu alınamadı.";
 
       if (!response.ok) {
+        if (response.status === 401) {
+          router.replace("/admin/login");
+          router.refresh();
+          return;
+        }
+
+        if (response.status === 403) {
+          setError("Bu işlemi gerçekleştirme yetkiniz bulunmuyor.");
+          setNeedsVerification(true);
+          return;
+        }
+
         setError(message);
         setNeedsVerification(true);
         router.refresh();
         return;
-        }
+      }
+
 
       setSuccess(message);
       router.refresh();
@@ -134,7 +147,7 @@ export default function ApplicationActions({
           <button
             type="button"
             onClick={() => openConfirmation("approve")}
-            disabled={loading || success !== ""}
+            disabled={loading || success !== "" || needsVerification}
             className="rounded-lg bg-green-600 px-5 py-2.5 font-medium text-white hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-50"
           >
             {loading ? "İşleniyor..." : "Onayla"}
@@ -143,7 +156,7 @@ export default function ApplicationActions({
           <button
             type="button"
             onClick={() => openConfirmation("reject")}
-            disabled={loading || success !== ""}
+            disabled={loading || success !== "" || needsVerification}
             className="rounded-lg bg-red-600 px-5 py-2.5 font-medium text-white hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-50"
           >
             {loading ? "İşleniyor..." : "Reddet"}

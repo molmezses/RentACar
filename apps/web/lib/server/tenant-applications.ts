@@ -90,6 +90,14 @@ export async function getTenantApplications(
     redirect("/admin/login");
   }
 
+  // Kullanıcının başvuruları görüntüleme yetkisi yoksa.
+  if (response.status === 403) {
+    return {
+      ok: false,
+      error: "Şirket başvurularını görüntüleme yetkiniz yok.",
+    };
+  }
+
   if (!response.ok) {
     return {
       ok: false,

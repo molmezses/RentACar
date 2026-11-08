@@ -44,6 +44,15 @@ export async function getAdminSession(): Promise<AdminSessionResult> {
     redirect("/admin/login");
   }
 
+
+  // Kullanıcının yönetim paneline erişim yetkisi yoksa.
+  if (response.status === 403) {
+    return {
+      ok: false,
+      error: "Yönetim paneline erişim yetkiniz bulunmuyor.",
+    };
+  }
+
   if (!response.ok) {
     return {
       ok: false,

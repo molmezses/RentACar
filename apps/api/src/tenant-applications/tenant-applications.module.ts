@@ -7,8 +7,10 @@ import { AdminTenantApplicationsController } from './admin-tenant-applications.c
 import { TenantApplicationsController } from './tenant-applications.controller.js';
 import { TenantApplicationsService } from './tenant-applications.service.js';
 
+import { InvitationSecurityModule } from '../invitation-security/invitation-security.module.js';
+
 @Module({
-  imports: [PrismaModule, AuthModule],
+  imports: [PrismaModule, AuthModule , InvitationSecurityModule],
   controllers: [
     TenantApplicationsController,
     AdminTenantApplicationsController,

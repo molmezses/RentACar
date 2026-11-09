@@ -2,6 +2,7 @@ import { defineConfig } from 'vitest/config';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import dotenv from 'dotenv';
+import { randomBytes } from 'node:crypto';
 
 const envPath = resolve(process.cwd(), '../../.env.test');
 const testEnv = dotenv.parse(readFileSync(envPath));
@@ -30,6 +31,10 @@ process.env.DATABASE_URL = databaseUrl;
 // E2E testleri için geliştirme ortamından bağımsız JWT anahtarı.
 process.env.JWT_SECRET =
   'rentacar-e2e-only-local-jwt-secret-not-for-production';
+
+  // Isolated AES-256-GCM encryption key for E2E tests.
+process.env.TENANT_INVITATION_ENCRYPTION_KEY =
+  randomBytes(32).toString('hex');
 
 export default defineConfig({
   resolve: { tsconfigPaths: true },

@@ -8,9 +8,14 @@ import { PrismaService } from '../prisma/prisma.service.js';
 import { CreateTenantApplicationDto } from './dto/create-tenant-application.dto.js';
 import type { ApplicationStatusFilter } from './dto/list-tenant-applications-query.dto.js';
 
+import { InvitationSecurityService } from '../invitation-security/invitation-security.service.js';
+
 @Injectable()
 export class TenantApplicationsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly invitationSecurity: InvitationSecurityService,
+  ) {}
 
   async create(createTenantApplicationDto: CreateTenantApplicationDto) {
     return this.prisma.tenantApplication.create({
@@ -52,21 +57,23 @@ export class TenantApplicationsService {
   async approveApplication(id: string) {
     try {
       return await this.prisma.$transaction(async (tx) => {
-        // 1. Başvuruyu bul.
+        // 1. Find the application.
         const application = await tx.tenantApplication.findUnique({
           where: { id },
         });
 
         if (!application) {
-          throw new NotFoundException('Şirket başvurusu bulunamadı.');
+          throw new NotFoundException('Tenant application is not found.');
         }
 
-        // 2. Yalnızca bekleyen başvurular onaylanabilir.
+        // 2. Only pending applications can be approved.
         if (application.status !== 'PENDING' || application.tenantId !== null) {
-          throw new ConflictException('Bu başvuru daha önce işleme alınmış.');
+          throw new ConflictException(
+            'This application has already been proceesed.',
+          );
         }
 
-        // 3. Başvuruyu koşullu olarak onayla.
+        // 3. Conditionally claim the application.
         const claimed = await tx.tenantApplication.updateMany({
           where: {
             id,
@@ -80,11 +87,11 @@ export class TenantApplicationsService {
 
         if (claimed.count !== 1) {
           throw new ConflictException(
-            'Başvuru başka bir işlem tarafından güncellendi.',
+            'This application was updated by another transaction. ',
           );
         }
 
-        // 4. Şirketin Tenant kaydını oluştur.
+        // 4. Create the tenant.
         const tenant = await tx.tenant.create({
           data: {
             name: application.companyName,
@@ -93,7 +100,42 @@ export class TenantApplicationsService {
           },
         });
 
-        // 5. Başvuruyu oluşturulan Tenant ile ilişkilendir.
+        // 5. Create the tenant administrator.
+        const tenantAdmin = await tx.tenantAdmin.create({
+          data: {
+            tenantId: tenant.id,
+            email: application.contactEmail.trim().toLowerCase(),
+          },
+        });
+
+        // 6. Generate the activation token and its protected copies.
+        const rawToken = this.invitationSecurity.generateToken();
+        const tokenHash = this.invitationSecurity.hashToken(rawToken);
+        const encryptedToken = this.invitationSecurity.encryptToken(rawToken);
+
+        const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
+
+        // 7. Persist only the token hash for activation verification.
+        const activationToken = await tx.tenantActivationToken.create({
+          data: {
+            tenantAdminId: tenantAdmin.id,
+            tokenHash,
+            expiresAt,
+          },
+        });
+
+        // 8. Persist a durable invitation delivery job.
+        await tx.invitationDelivery.create({
+          data: {
+            tenantAdminId: tenantAdmin.id,
+            activationTokenId: activationToken.id,
+            recipientEmail: tenantAdmin.email,
+            encryptedToken,
+            status: 'PENDING',
+          },
+        });
+
+        // 9. Link the approved application to its tenant.
         const updatedApplication = await tx.tenantApplication.update({
           where: { id },
           data: {
@@ -111,8 +153,20 @@ export class TenantApplicationsService {
         error instanceof Prisma.PrismaClientKnownRequestError &&
         error.code === 'P2002'
       ) {
+        const target = error.meta?.['target'];
+
+        if (Array.isArray(target) && target.includes('slug')) {
+          throw new ConflictException('this slug value is already in use.');
+        }
+
+        if (Array.isArray(target) && target.includes('email')) {
+          throw new ConflictException(
+            'A tenant administrator with this email address already exists.',
+          );
+        }
+
         throw new ConflictException(
-          'Bu şirket slug değeri zaten kullanılıyor.',
+          'This process violates a unique registration restriction.',
         );
       }
 
@@ -180,11 +234,9 @@ export class TenantApplicationsService {
     });
 
     if (!application) {
-      throw new NotFoundException(
-        "Tenant application not found"
-      );
+      throw new NotFoundException('Tenant application not found');
     }
 
-    return application
+    return application;
   }
 }

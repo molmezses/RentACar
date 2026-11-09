@@ -1,18 +1,10 @@
-import {
-  ConflictException,
-  NotFoundException,
-} from '@nestjs/common';
+import { ConflictException, NotFoundException } from '@nestjs/common';
 
-import {
-  beforeEach,
-  describe,
-  expect,
-  it,
-  vi,
-} from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { PrismaService } from '../prisma/prisma.service.js';
 import { TenantApplicationsService } from './tenant-applications.service.js';
+import { InvitationSecurityService } from '../invitation-security/invitation-security.service.js';
 
 describe('TenantApplicationsService - Rejection', () => {
   let service: TenantApplicationsService;
@@ -24,6 +16,12 @@ describe('TenantApplicationsService - Rejection', () => {
   beforeEach(() => {
     vi.resetAllMocks();
 
+    const invitationSecurity = {
+      generateToken: () => 'test-token',
+      hashToken: () => 'test-token-hash',
+      encryptToken: () => 'encrypted-test-token',
+    } as unknown as InvitationSecurityService;
+
     const prisma = {
       tenantApplication: {
         findUnique,
@@ -32,7 +30,7 @@ describe('TenantApplicationsService - Rejection', () => {
       },
     } as unknown as PrismaService;
 
-    service = new TenantApplicationsService(prisma);
+    service = new TenantApplicationsService(prisma, invitationSecurity);
   });
 
   it('PENDING başvuruyu REJECTED yapar', async () => {
@@ -52,9 +50,7 @@ describe('TenantApplicationsService - Rejection', () => {
     updateMany.mockResolvedValue({ count: 1 });
     findUniqueOrThrow.mockResolvedValue(rejectedApplication);
 
-    const result = await service.rejectApplication(
-      application.id,
-    );
+    const result = await service.rejectApplication(application.id);
 
     expect(updateMany).toHaveBeenCalledWith({
       where: {

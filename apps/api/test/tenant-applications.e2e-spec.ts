@@ -8,6 +8,57 @@ import { PrismaService } from '../src/prisma/prisma.service.js';
 import request from 'supertest';
 import { randomUUID } from 'node:crypto';
 
+async function cleanupApprovedApplication(
+  prisma: PrismaService,
+  slug: string,
+): Promise<void> {
+  if (!slug.startsWith('e2e-')) {
+    throw new Error('Invalid E2E test slug.');
+  }
+
+  const database = await prisma.$queryRaw<
+    Array<{ name: string }>
+  >`SELECT current_database() AS name`;
+
+  if (database[0]?.name !== 'rentacar_test') {
+    throw new Error('Cleanup is only allowed in rentacar_test.');
+  }
+
+  const tenant = await prisma.tenant.findUnique({
+    where: { slug },
+  });
+
+  await prisma.tenantApplication.deleteMany({
+    where: { slug },
+  });
+
+  if (!tenant) {
+    return;
+  }
+
+  const admin = await prisma.tenantAdmin.findUnique({
+    where: { tenantId: tenant.id },
+  });
+
+  if (admin) {
+    await prisma.invitationDelivery.deleteMany({
+      where: { tenantAdminId: admin.id },
+    });
+
+    await prisma.tenantActivationToken.deleteMany({
+      where: { tenantAdminId: admin.id },
+    });
+
+    await prisma.tenantAdmin.delete({
+      where: { id: admin.id },
+    });
+  }
+
+  await prisma.tenant.delete({
+    where: { id: tenant.id },
+  });
+}
+
 describe('Tenant Applications E2E', () => {
   let app: INestApplication;
   let prisma: PrismaService;
@@ -176,6 +227,7 @@ describe('Tenant Applications E2E', () => {
 
   it('admin başvuruyu onayladığında Tenant oluşturmalı', async () => {
     const slug = `e2e-approve-${randomUUID()}`;
+    const email = `e2e-approve-${randomUUID()}@example.test`;
 
     try {
       // 1. Yeni başvuru oluştur.
@@ -185,7 +237,7 @@ describe('Tenant Applications E2E', () => {
           companyName: 'E2E Approval Rent A Car',
           slug,
           contactName: 'Test Kullanıcısı',
-          contactEmail: 'approval-e2e@example.com',
+          contactEmail: email,
           contactPhone: '+905321234567',
         })
         .expect(201);
@@ -195,8 +247,10 @@ describe('Tenant Applications E2E', () => {
       // 2. Admin JWT ile başvuruyu onayla.
       const approved = await request(app.getHttpServer())
         .patch(`/admin/tenant-applications/${applicationId}/approve`)
-        .set('Authorization', `Bearer ${adminToken}`)
-        .expect(200);
+        .set('Authorization', `Bearer ${adminToken}`);
+
+
+      expect(approved.status).toBe(200);
 
       expect(approved.body.application.status).toBe('APPROVED');
       expect(approved.body.tenant.status).toBe('APPROVED');
@@ -215,15 +269,8 @@ describe('Tenant Applications E2E', () => {
       expect(savedApplication?.tenantId).toBe(savedTenant?.id);
       expect(savedTenant?.name).toBe('E2E Approval Rent A Car');
     } finally {
-      // Önce başvuruyu, sonra ilişkili Tenant kaydını temizle.
-      await prisma.tenantApplication.deleteMany({
-        where: { slug },
-      });
-
-      await prisma.tenant.deleteMany({
-        where: { slug },
-      });
-    }
+  await cleanupApprovedApplication(prisma, slug);
+}
   });
 
   it('admin başvuruyu reddettiğinde Tenant oluşturmamalı', async () => {
@@ -288,6 +335,7 @@ describe('Tenant Applications E2E', () => {
 
   it('onaylanmış başvurunun tekrar onaylanmasını engellemeli', async () => {
     const slug = `e2e-double-approve-${randomUUID()}`;
+    const email = `e2e-double-${randomUUID()}@example.test`;
 
     try {
       // 1. Yeni başvuru oluştur.
@@ -297,7 +345,7 @@ describe('Tenant Applications E2E', () => {
           companyName: 'E2E Double Approval Rent A Car',
           slug,
           contactName: 'Test Kullanıcısı',
-          contactEmail: 'double-approval@example.com',
+          contactEmail: email,
           contactPhone: '+905321234567',
         })
         .expect(201);
@@ -305,10 +353,14 @@ describe('Tenant Applications E2E', () => {
       const applicationId: string = created.body.id;
 
       // 2. İlk onay başarılı olmalı.
-      await request(app.getHttpServer())
+      // 2. İlk onay başarılı olmalı.
+      const firstApproval = await request(app.getHttpServer())
         .patch(`/admin/tenant-applications/${applicationId}/approve`)
-        .set('Authorization', `Bearer ${adminToken}`)
-        .expect(200);
+        .set('Authorization', `Bearer ${adminToken}`);
+
+
+
+      expect(firstApproval.status).toBe(200);
 
       // 3. İkinci onay 409 ile reddedilmeli.
       await request(app.getHttpServer())
@@ -330,15 +382,8 @@ describe('Tenant Applications E2E', () => {
 
       expect(tenantCount).toBe(1);
     } finally {
-      // Test kayıtlarını temizle.
-      await prisma.tenantApplication.deleteMany({
-        where: { slug },
-      });
-
-      await prisma.tenant.deleteMany({
-        where: { slug },
-      });
-    }
+  await cleanupApprovedApplication(prisma, slug);
+}
   });
 
   it('reddedilmiş başvurunun onaylanmasını engellemeli', async () => {

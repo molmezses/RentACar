@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { TenantApplicationsService } from './tenant-applications.service.js';
 import { PrismaService } from '../prisma/prisma.service.js';
+import { InvitationSecurityService } from '../invitation-security/invitation-security.service.js';
 
 describe('TenantApplicationsService', () => {
   it('should create a pending tenant application', async () => {
@@ -15,7 +16,16 @@ describe('TenantApplicationsService', () => {
       },
     } as unknown as PrismaService;
 
-    const service = new TenantApplicationsService(prismaMock);
+    const invitationSecurity = {
+      generateToken: () => 'test-token',
+      hashToken: () => 'test-token-hash',
+      encryptToken: () => 'encrypted-test-token',
+    } as unknown as InvitationSecurityService;
+
+    const service = new TenantApplicationsService(
+      prismaMock,
+      invitationSecurity,
+    );
 
     const dto = {
       companyName: 'Ankara RentACar',

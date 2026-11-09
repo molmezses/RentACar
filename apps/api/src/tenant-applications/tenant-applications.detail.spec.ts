@@ -1,8 +1,8 @@
-
 import { describe, expect, it, vi } from 'vitest';
 import { NotFoundException } from '@nestjs/common';
 import { TenantApplicationsService } from './tenant-applications.service.js';
 import type { PrismaService } from '../prisma/prisma.service.js';
+import { InvitationSecurityService } from '../invitation-security/invitation-security.service.js';
 
 describe('TenantApplicationsService - findOneForAdmin', () => {
   const application = {
@@ -27,7 +27,13 @@ describe('TenantApplicationsService - findOneForAdmin', () => {
       },
     } as unknown as PrismaService;
 
-    const service = new TenantApplicationsService(prisma);
+    const invitationSecurity = {
+      generateToken: () => 'test-token',
+      hashToken: () => 'test-token-hash',
+      encryptToken: () => 'encrypted-test-token',
+    } as unknown as InvitationSecurityService;
+
+    const service = new TenantApplicationsService(prisma, invitationSecurity);
 
     return { service, findUnique };
   }
@@ -37,9 +43,7 @@ describe('TenantApplicationsService - findOneForAdmin', () => {
 
     findUnique.mockResolvedValue(application);
 
-    const result = await service.findOneForAdmin(
-      'application-123',
-    );
+    const result = await service.findOneForAdmin('application-123');
 
     expect(result).toEqual(application);
 
@@ -67,8 +71,8 @@ describe('TenantApplicationsService - findOneForAdmin', () => {
 
     findUnique.mockResolvedValue(null);
 
-    await expect(
-      service.findOneForAdmin('unknown-id'),
-    ).rejects.toThrow(NotFoundException);
+    await expect(service.findOneForAdmin('unknown-id')).rejects.toThrow(
+      NotFoundException,
+    );
   });
 });

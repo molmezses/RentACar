@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { PrismaService } from '../prisma/prisma.service.js';
 import { TenantApplicationsService } from './tenant-applications.service.js';
+import { InvitationSecurityService } from '../invitation-security/invitation-security.service.js';
 
 describe('TenantApplicationsService - Admin Listing', () => {
   const findMany = vi.fn();
@@ -12,7 +13,13 @@ describe('TenantApplicationsService - Admin Listing', () => {
     },
   } as unknown as PrismaService;
 
-  const service = new TenantApplicationsService(prisma);
+  const invitationSecurity = {
+    generateToken: () => 'test-token',
+    hashToken: () => 'test-token-hash',
+    encryptToken: () => 'encrypted-test-token',
+  } as unknown as InvitationSecurityService;
+
+  const service = new TenantApplicationsService(prisma, invitationSecurity);
 
   beforeEach(() => {
     vi.resetAllMocks();
@@ -59,31 +66,31 @@ describe('TenantApplicationsService - Admin Listing', () => {
   });
 
   it('status gönderildiğinde başvuruları filtreler', async () => {
-  const applications = [
-    {
-      id: 'application-1',
-      status: 'PENDING',
-    },
-  ];
-
-  findMany.mockResolvedValue(applications);
-
-  const result = await service.findAllForAdmin('PENDING');
-
-  expect(findMany).toHaveBeenCalledWith(
-    expect.objectContaining({
-      where: {
+    const applications = [
+      {
+        id: 'application-1',
         status: 'PENDING',
       },
-      orderBy: {
-        createdAt: 'desc',
-      },
-      take: 50,
-    }),
-  );
+    ];
 
-  expect(result).toEqual(applications);
-});
+    findMany.mockResolvedValue(applications);
+
+    const result = await service.findAllForAdmin('PENDING');
+
+    expect(findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: {
+          status: 'PENDING',
+        },
+        orderBy: {
+          createdAt: 'desc',
+        },
+        take: 50,
+      }),
+    );
+
+    expect(result).toEqual(applications);
+  });
 
   it('başvuru bulunamadığında boş liste döndürür', async () => {
     findMany.mockResolvedValue([]);

@@ -17,12 +17,16 @@ describe('AppController (e2e)', () => {
     await app.init();
   });
 
-  it('/ (GET)', () => {
-    return request(app.getHttpServer())
-      .get('/')
-      .expect(200)
-      .expect('Hello World!');
+  it('GET /health should return API health status', async () => {
+  const response = await request(app.getHttpServer())
+    .get('/health')
+    .expect(200);
+
+  expect(response.body).toEqual({
+    status: 'ok',
+    service: 'RentACar API',
   });
+});
 
   it('yalnızca rentacar_test veritabanına bağlanmalı', async () => {
     const prisma = app.get(PrismaService);

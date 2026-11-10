@@ -7,10 +7,13 @@ import { AuthController } from './auth.controller.js';
 import { AuthService } from './auth.service.js';
 import { JwtAuthGuard } from './guards/jwt-auth.guard.js';
 
+import { InvitationSecurityModule } from '../invitation-security/invitation-security.module.js';
+import { TenantAdminActivationService } from './tenant-admin-activation.service.js';
+
 @Module({
   imports: [
     PrismaModule,
-
+    InvitationSecurityModule,
     ConfigModule.forRoot({
       envFilePath: '../../.env',
     }),
@@ -32,7 +35,7 @@ import { JwtAuthGuard } from './guards/jwt-auth.guard.js';
     }),
   ],
   controllers: [AuthController],
-  providers: [AuthService , JwtAuthGuard],
+  providers: [AuthService , JwtAuthGuard, TenantAdminActivationService],
   exports: [JwtAuthGuard, JwtModule],
 })
 export class AuthModule {}

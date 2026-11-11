@@ -1,5 +1,6 @@
 //Araç listesinde ve detay ekranında Aktif/Pasif durumunu gösterme
 
+
 import type { FleetStatus } from "@/types/vehicle";
 
 type VehicleStatusBadgeProps = {
@@ -13,12 +14,19 @@ export default function VehicleStatusBadge({
 
   return (
     <span
-      className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-medium ${
+      className={`inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-bold shadow-sm ${
         isActive
-          ? "bg-green-100 text-green-800"
-          : "bg-slate-100 text-slate-600"
+          ? "border-emerald-200 bg-emerald-100 text-emerald-800"
+          : "border-rose-200 bg-rose-100 text-rose-800"
       }`}
     >
+      <span
+        aria-hidden="true"
+        className={`h-2 w-2 rounded-full ${
+          isActive ? "bg-emerald-600" : "bg-rose-600"
+        }`}
+      />
+
       {isActive ? "Aktif" : "Pasif"}
     </span>
   );

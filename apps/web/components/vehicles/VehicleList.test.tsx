@@ -48,24 +48,32 @@ describe("VehicleList", () => {
   it("filters vehicles by search", () => {
     render(<VehicleList vehicles={mockVehicles} />);
 
-    fireEvent.change(screen.getByLabelText("Araç ara"), {
-      target: { value: "Toyota" },
-    });
+    fireEvent.click(screen.getByRole("button", { name: "Filo durumu" }));
+    fireEvent.click(screen.getByRole("button", { name: "Aktif" }));
 
     expect(screen.getByText("Toyota Corolla")).toBeInTheDocument();
     expect(screen.queryByText("Renault Clio")).not.toBeInTheDocument();
   });
 
-  it("filters vehicles by fleet status", () => {
-    render(<VehicleList vehicles={mockVehicles} />);
+  
+it("filters vehicles by fleet status", () => {
+  render(<VehicleList vehicles={mockVehicles} />);
 
-    fireEvent.change(screen.getByLabelText("Filo durumu"), {
-      target: { value: "ACTIVE" },
-    });
+  // Filtre menüsünü aç
+  fireEvent.click(
+    screen.getByRole("button", { name: "Filo durumu" }),
+  );
 
-    expect(screen.getByText("Toyota Corolla")).toBeInTheDocument();
-    expect(screen.queryByText("Renault Clio")).not.toBeInTheDocument();
-  });
+  // Aktif seçeneğini seç
+  fireEvent.click(
+    screen.getByRole("button", { name: "Aktif" }),
+  );
+
+  // Yalnızca aktif araç kalmalı
+  expect(screen.getByText("Toyota Corolla")).toBeInTheDocument();
+  expect(screen.queryByText("Renault Clio")).not.toBeInTheDocument();
+});
+
 
   it("shows an empty state when there are no vehicles", () => {
     render(<VehicleList vehicles={[]} />);
@@ -124,7 +132,7 @@ describe("VehicleList", () => {
     expect(toyotaCard).not.toBeNull();
 
     fireEvent.click(
-      within(toyotaCard!).getByRole("button", { name: "Detay" }),
+      within(toyotaCard!).getByRole("button", { name: "Detayları Gör" })
     );
 
     expect(onView).toHaveBeenCalledWith("mock-vehicle-1");

@@ -305,4 +305,5 @@ describe('PostgreSQL Integration', () => {
       await cleanupApprovalFixture(application.id, slug);
     }
   });
+
 });

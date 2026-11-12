@@ -9,6 +9,7 @@ import { JwtAuthGuard } from './guards/jwt-auth.guard.js';
 
 import { InvitationSecurityModule } from '../invitation-security/invitation-security.module.js';
 import { TenantAdminActivationService } from './tenant-admin-activation.service.js';
+import { TenantJwtAuthGuard } from './guards/tenant-jwt-auth.guard.js';
 
 @Module({
   imports: [
@@ -35,7 +36,7 @@ import { TenantAdminActivationService } from './tenant-admin-activation.service.
     }),
   ],
   controllers: [AuthController],
-  providers: [AuthService , JwtAuthGuard, TenantAdminActivationService],
+  providers: [AuthService , JwtAuthGuard, TenantAdminActivationService, TenantJwtAuthGuard],
   exports: [JwtAuthGuard, JwtModule],
 })
 export class AuthModule {}

@@ -5,6 +5,8 @@ import {
   UseGuards,
   Patch,
   Param,
+  Delete,
+  HttpCode,
 } from '@nestjs/common';
 
 import {
@@ -18,6 +20,8 @@ import {
   ApiTags,
   ApiUnauthorizedResponse,
   ApiBadRequestResponse,
+  ApiNoContentResponse,
+  ApiForbiddenResponse,
   getSchemaPath,
 } from '@nestjs/swagger';
 
@@ -185,5 +189,34 @@ export class AdminTenantApplicationsController {
   })
   async reject(@Param('id') id: string) {
     return this.tenantApplicationsService.rejectApplication(id);
+  }
+  @Delete(':id')
+  @HttpCode(204)
+  @ApiOperation({ //endpointe başlık ve açıklama ekler
+    summary:'Delete an eligible tenant applicaiton (Platform Admin)',
+    description: 'Permanently deletes only PENDING OR REJECTED applications without a linked tenant. ',
+  })
+  @ApiParam({ //silinecek başvurunun idsini alır
+    name:'id',
+    description: 'ID of the tenant application to delete',
+    type:String,
+  })
+  @ApiNoContentResponse({ //silme başarılı
+    description:'Tenant application deleted successfully.',
+  })
+  @ApiUnauthorizedResponse({//token eksik,geçersiz
+    description: 'Missing , invalid, or expired Platform Admin JWT.',
+  })
+  @ApiForbiddenResponse({
+    description:'Authenticated user does not have Platform Admin permission.',
+  })
+  @ApiNotFoundResponse({ //başvuru bulunamadı
+    description:'Tenant applicaiton not found.',
+  })
+  @ApiConflictResponse({ //başvuru onaylanmış / tenanta bağlı
+    description: 'Application is approved, tenant-linked, or cannot be deleted.',
+  })
+  async remove(@Param('id') id:string):Promise<void>{
+    await this.tenantApplicationsService.deleteApplication(id);
   }
 }

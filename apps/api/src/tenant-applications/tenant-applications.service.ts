@@ -214,6 +214,51 @@ export class TenantApplicationsService {
     });
   }
 
+  //Başvuru durumu PENDING veya REJECTED ise ve tenantId null ise başvuruyu sil
+  async deleteApplication(id: string): Promise<void> {
+  try {
+    const result = await this.prisma.tenantApplication.deleteMany({
+      where: {
+        id,
+        status: {
+          in: ['PENDING', 'REJECTED'],
+        },
+        tenantId: null,
+      },
+    });
+    //kayıt silinirse işlem başarılı
+    if (result.count === 1) {
+      return;
+    }
+    //kayıt silinmediyse başvurunun mevcut olup olmadığı kontrol ediliyor
+    const application = await this.prisma.tenantApplication.findUnique({
+      where: { id },
+      select: {
+        id: true,
+      },
+    });
+    //kayıt yoksa 404 silinmeye uygun değilse 409 döndürür
+    if (!application) {
+      throw new NotFoundException('Tenant application not found.');
+    }
+
+    throw new ConflictException(
+      'Approved or tenant-linked applications cannot be deleted.',
+    );
+  } catch (error) {
+    if (
+      error instanceof Prisma.PrismaClientKnownRequestError &&
+      error.code === 'P2003'
+    ) {
+      throw new ConflictException(
+        'This application cannot be deleted because related records exist.',
+      );
+    }
+
+    throw error;
+  }
+}
+
   async findOneForAdmin(id: string) {
     const application = await this.prisma.tenantApplication.findUnique({
       where: {

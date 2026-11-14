@@ -4,9 +4,11 @@ import { TenantsController } from './tenants.controller.js';
 import { TenantsService } from './tenants.service.js';
 import { AuthModule } from '../auth/auth.module.js';
 
+import { TenantProfileController } from './tenant-profile.controller.js';
+
 @Module({
   imports: [PrismaModule, AuthModule],
-  controllers: [TenantsController],
+  controllers: [TenantsController, TenantProfileController],
   providers: [TenantsService]
 })
 export class TenantsModule {

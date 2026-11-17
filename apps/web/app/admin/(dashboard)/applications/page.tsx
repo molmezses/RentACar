@@ -1,4 +1,3 @@
-
 import { Suspense } from "react";
 import Link from "next/link";
 
@@ -26,17 +25,12 @@ const filters = [
   { label: "Reddedilen", status: "REJECTED" },
 ] as const;
 
-async function ApplicationsContent({
-  searchParams,
-}: ApplicationsPageProps) {
+async function ApplicationsContent({ searchParams }: ApplicationsPageProps) {
   const session = await getAdminSession();
 
   if (!session.ok) {
     return (
-      <ErrorState
-        title="Oturum kontrolü başarısız"
-        message={session.error}
-      />
+      <ErrorState title="Oturum kontrolü başarısız" message={session.error} />
     );
   }
 
@@ -57,15 +51,14 @@ async function ApplicationsContent({
     );
   }
 
-  const selectedStatus: TenantApplicationStatus | undefined =
-    rawStatus;
+  const selectedStatus: TenantApplicationStatus | undefined = rawStatus;
 
   const result = await getTenantApplications(selectedStatus);
 
   const filterNavigation = (
     <nav
       aria-label="Başvuru durum filtreleri"
-      className="mb-6 flex flex-wrap gap-2"
+      className="mb-6 flex max-w-full flex-nowrap gap-2 overflow-x-auto pb-2"
     >
       {filters.map((filter) => {
         const isActive = selectedStatus === filter.status;
@@ -81,8 +74,8 @@ async function ApplicationsContent({
             aria-current={isActive ? "page" : undefined}
             className={
               isActive
-                ? "rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white"
-                : "rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100"
+                ? "shrink-0 whitespace-nowrap rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white"
+                : "shrink-0 whitespace-nowrap rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100"
             }
           >
             {filter.label}
@@ -96,10 +89,7 @@ async function ApplicationsContent({
     return (
       <>
         {filterNavigation}
-        <ErrorState
-          title="Başvurular yüklenemedi"
-          message={result.error}
-        />
+        <ErrorState title="Başvurular yüklenemedi" message={result.error} />
       </>
     );
   }
@@ -129,11 +119,7 @@ export default function ApplicationsPage({
         Şirket Başvuruları
       </h2>
 
-      <Suspense
-        fallback={
-          <LoadingState message="Başvurular yükleniyor..." />
-        }
-      >
+      <Suspense fallback={<LoadingState message="Başvurular yükleniyor..." />}>
         <ApplicationsContent searchParams={searchParams} />
       </Suspense>
     </main>

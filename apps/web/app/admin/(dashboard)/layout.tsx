@@ -10,7 +10,7 @@ export default function AdminDashboardLayout({
   children,
 }: AdminDashboardLayoutProps) {
   return (
-    <div className="flex min-h-screen bg-slate-100">
+    <div className="flex min-h-screen bg-[#f6f8fa]">
       <Suspense fallback={<div className="hidden w-64 shrink-0 md:block" />}>
       <AdminSidebar />
       </Suspense>

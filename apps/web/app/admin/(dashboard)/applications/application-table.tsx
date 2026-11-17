@@ -1,4 +1,3 @@
-
 import Link from "next/link";
 
 import type { TenantApplication } from "../../../../types/tenant-application";
@@ -15,9 +14,7 @@ export default function ApplicationTable({
   return (
     <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
       <div className="border-b border-slate-200 px-5 py-4">
-        <p className="text-sm font-medium text-slate-900">
-          Başvuru Listesi
-        </p>
+        <p className="text-sm font-medium text-slate-900">Başvuru Listesi</p>
         <p className="mt-1 text-xs text-slate-500">
           Gösterilen başvuru sayısı: {applications.length}
         </p>
@@ -73,16 +70,13 @@ export default function ApplicationTable({
                 </td>
 
                 <td className="whitespace-nowrap px-5 py-4 text-slate-600">
-                  {new Date(application.createdAt).toLocaleDateString(
-                    "tr-TR",
-                    { timeZone: "Europe/Istanbul" },
-                  )}
+                  {new Date(application.createdAt).toLocaleDateString("tr-TR", {
+                    timeZone: "Europe/Istanbul",
+                  })}
                 </td>
 
                 <td className="px-5 py-4">
-                  <ApplicationStatusBadge
-                    status={application.status}
-                  />
+                  <ApplicationStatusBadge status={application.status} />
                 </td>
 
                 <td className="px-5 py-4 text-right">
@@ -110,9 +104,12 @@ export default function ApplicationTable({
 
       <div className="divide-y divide-slate-100 md:hidden">
         {applications.map((application) => (
-          <article key={application.id} className="space-y-3 p-4">
+          <article
+            key={application.id}
+            className="min-w-0 space-y-3 overflow-hidden p-4"
+          >
             <div className="flex flex-wrap items-start justify-between gap-2">
-              <div className="min-w-0">
+              <div className="min-w-0 flex-1">
                 <h3 className="break-words font-semibold text-slate-900">
                   {application.companyName}
                 </h3>
@@ -128,16 +125,13 @@ export default function ApplicationTable({
               {application.contactEmail}
             </p>
 
-            <p className="text-sm text-slate-600">
-              {application.contactPhone}
-            </p>
+            <p className="text-sm text-slate-600">{application.contactPhone}</p>
 
-            <div className="flex flex-wrap items-center justify-between gap-2">
+            <div className="flex flex-wrap items-center gap-2 sm:justify-between">
               <span className="text-xs text-slate-500">
-                {new Date(application.createdAt).toLocaleDateString(
-                  "tr-TR",
-                  { timeZone: "Europe/Istanbul" },
-                )}
+                {new Date(application.createdAt).toLocaleDateString("tr-TR", {
+                  timeZone: "Europe/Istanbul",
+                })}
               </span>
 
               <Link
@@ -146,12 +140,12 @@ export default function ApplicationTable({
               >
                 Detayları Gör
               </Link>
-            <DeleteApplicationButton
-              applicationId={application.id}
-              companyName={application.companyName}
-              status={application.status}
-              tenantId={application.tenantId}
-            />
+              <DeleteApplicationButton
+                applicationId={application.id}
+                companyName={application.companyName}
+                status={application.status}
+                tenantId={application.tenantId}
+              />
             </div>
           </article>
         ))}

@@ -3,6 +3,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 
 import TenantLogoutButton from "../logout-button";
 import TenantNavIcon from "../tenant-nav-icon";
@@ -15,6 +16,14 @@ export default function TenantSidebar({
   email,
 }: TenantSidebarProps) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  const pathname = usePathname();
+
+  const isDashboardActive = pathname === "/tenant";
+
+  const isVehiclesActive =
+    pathname === "/tenant/vehicles" ||
+    pathname.startsWith("/tenant/vehicles/");  //startsWith:belirtilen sayfalardayken sidebardaki Araçlar menüsü aktif görünsün
 
   return (
     <aside className="w-full shrink-0 bg-[#13241f] text-white md:sticky md:top-0 md:flex md:h-screen md:w-64 md:flex-col">
@@ -93,23 +102,32 @@ export default function TenantSidebar({
 
           <Link
             href="/tenant"
-            aria-current="page"
+            aria-current={isDashboardActive ? "page" : undefined}
             onClick={() => setMobileMenuOpen(false)}
-            className="flex items-center gap-3 rounded-xl bg-[#285344] px-4 py-3 text-sm font-medium text-white"
-          >
+            className={`flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium transition-colors ${
+              isDashboardActive
+                ? "bg-[#285344] text-white"
+                : "text-[#b7c9c1] hover:bg-white/10 hover:text-white"
+            }`}
+           >
             <TenantNavIcon name="dashboard" />
             <span>Genel Bakış</span>
           </Link>
 
-          <div className="flex items-center justify-between rounded-xl px-4 py-3 text-sm text-[#b7c9c1]">
-            <span className="flex items-center gap-3">
-              <TenantNavIcon name="car" />
-              <span>Araçlar</span>
-            </span>
-            <span className="text-[10px] text-white/35">
-              Yakında
-            </span>
-          </div>
+         {/* Araçlar menüsünü aktif hale getirdik */}
+          <Link
+            href="/tenant/vehicles"
+            aria-current={isVehiclesActive ? "page" : undefined}
+            onClick={() => setMobileMenuOpen(false)}
+            className={`flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium transition-colors ${
+              isVehiclesActive /*Ternary operator kulandık. Eğer araç aktifse aktif menü tasarımını kulan değilse normal menü tasarımını kullan */
+                ? "bg-[#285344] text-white"
+                : "text-[#b7c9c1] hover:bg-white/10 hover:text-white"
+            }`}
+          >
+            <TenantNavIcon name="car" />
+            <span>Araçlar</span>
+          </Link>
 
           <div className="flex items-center justify-between rounded-xl px-4 py-3 text-sm text-[#b7c9c1]">
             <span className="flex items-center gap-3">

@@ -79,68 +79,12 @@ export default function VehicleList({
 
   // Sıralamayı koruyarak filtreleri temizle
   function resetFilters() {
-    setOptions((previous) => ({
-      ...defaultVehicleListOptions,
-      sortBy: previous.sortBy,
-    }));
-  }
+  setOptions({ ...defaultVehicleListOptions });
+}
 
   // Sol filtre paneli
   const filterControls = (
-    <div className="space-y-5">
-      {/* Araç arama */}
-      <div>
-        <label
-          htmlFor="vehicle-search"
-          className="mb-2 block text-sm font-semibold text-slate-700"
-        >
-          Araç ara
-        </label>
-
-        <div className="relative">
-          <svg
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            aria-hidden="true"
-            className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400"
-          >
-            <circle cx="11" cy="11" r="7" />
-            <path d="m16 16 4 4" />
-          </svg>
-
-          <input
-            id="vehicle-search"
-            type="search"
-            placeholder="Marka, model veya plaka"
-            value={options.search}
-            onChange={(event) =>
-              updateOption("search", event.target.value)
-            }
-            className="w-full rounded-xl border border-slate-200 bg-white py-3 pl-10 pr-3 text-sm text-slate-900 outline-none transition-colors placeholder:text-slate-400 hover:border-slate-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
-          />
-        </div>
-      </div>
-
-      {/* Filo durumu */}
-      <VehicleFilterSelect
-        label="Filo durumu"
-        value={options.fleetStatus}
-        onChange={(value) =>
-          updateOption(
-            "fleetStatus",
-            value as VehicleListOptions["fleetStatus"],
-          )
-        }
-        options={[
-          { value: "", label: "Tüm araçlar" },
-          { value: "ACTIVE", label: "Aktif" },
-          { value: "INACTIVE", label: "Pasif" },
-        ]}
-      />
-
-      {/* Vites türü */}
+    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
       <VehicleFilterSelect
         label="Vites türü"
         value={options.transmission}
@@ -157,7 +101,6 @@ export default function VehicleList({
         ]}
       />
 
-      {/* Yakıt türü */}
       <VehicleFilterSelect
         label="Yakıt türü"
         value={options.fuelType}
@@ -178,15 +121,22 @@ export default function VehicleList({
         ]}
       />
 
-      {/* Filtreleri temizle */}
-      <button
-        type="button"
-        onClick={resetFilters}
-        disabled={!hasFilters}
-        className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 transition-colors hover:border-slate-300 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
-      >
-        Filtreleri temizle
-      </button>
+      <VehicleFilterSelect
+        label="Sıralama"
+        value={options.sortBy}
+        onChange={(value) =>
+          updateOption(
+            "sortBy",
+            value as VehicleListOptions["sortBy"],
+          )
+        }
+        options={[
+          { value: "newest", label: "Model yılı (Yeni → Eski)" },
+          { value: "make", label: "Marka (A → Z)" },
+          { value: "priceAsc", label: "Fiyat (Artan)" },
+          { value: "priceDesc", label: "Fiyat (Azalan)" },
+        ]}
+      />
     </div>
   );
 
@@ -195,7 +145,7 @@ export default function VehicleList({
       {/* Sayfa başlığı ve sıralama */}
       <header className="flex flex-wrap items-center justify-between gap-5">
         <div>
-          <h1 className="text-3xl font-extrabold tracking-tight text-slate-900">
+          <h1 className="text-2xl font-bold tracking-tight text-[#172e26]">
             Araç Filosu
           </h1>
 
@@ -205,165 +155,135 @@ export default function VehicleList({
         </div>
 
         <div className="flex flex-wrap items-end gap-3">
-          {/* Modern sıralama dropdown */}
-          <div className="w-60 max-w-full">
-            <VehicleFilterSelect
-              label="Sırala"
-              value={options.sortBy}
-              onChange={(value) =>
-                updateOption(
-                  "sortBy",
-                  value as VehicleListOptions["sortBy"],
-                )
-              }
-              options={[
-                {
-                  value: "newest",
-                  label: "Model yılı (Yeni → Eski)",
-                },
-                {
-                  value: "make",
-                  label: "Marka (A → Z)",
-                },
-                {
-                  value: "priceAsc",
-                  label: "Fiyat (Artan)",
-                },
-                {
-                  value: "priceDesc",
-                  label: "Fiyat (Azalan)",
-                },
-              ]}
-            />
-          </div>
-
           {/* Gerçek ekran bağlandığında gösterilir */}
           {onAdd && (
             <button
               type="button"
               onClick={onAdd}
-              className="rounded-xl bg-slate-900 px-5 py-3 text-sm font-semibold text-white transition-colors hover:bg-blue-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600"
-            >
-              + Araç Ekle
+              className="inline-flex items-center justify-center gap-2 rounded-lg bg-[#17674c] px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-[#12543d] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#17674c]"            >
+              Araç Ekle
             </button>
           )}
         </div>
       </header>
+            
+      {/* Filo durumu sekmeleri */}
+      <div
+        className="flex flex-wrap gap-2"
+        role="group"
+        aria-label="Filo durumuna göre filtrele"
+      >
+        {[
+          { label: "Tümü", value: "", count: vehicles.length },
+          { label: "Aktif", value: "ACTIVE", count: activeCount },
+          { label: "Pasif", value: "INACTIVE", count: inactiveCount },
+        ].map((tab) => {
+          const isActive = options.fleetStatus === tab.value;
 
-      {/* Filo istatistikleri */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-        {/* Toplam araç */}
-        <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-          <div className="flex items-center justify-between gap-3">
-            <p className="text-sm font-medium text-slate-500">
-              Toplam araç
-            </p>
-
-            <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-100 text-slate-700">
-              <svg
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="1.8"
-                aria-hidden="true"
-                className="h-5 w-5"
-              >
-                <path d="M5 17h14l1-6-3-5H7l-3 5 1 6Z" />
-                <path d="M4 11h16M7 17v2m10-2v2" />
-                <circle cx="7.5" cy="14" r=".8" />
-                <circle cx="16.5" cy="14" r=".8" />
-              </svg>
-            </span>
-          </div>
-
-          <p className="mt-3 text-3xl font-extrabold text-slate-900">
-            {vehicles.length}
-          </p>
-        </div>
-
-        {/* Aktif araç */}
-        <div className="rounded-2xl border border-emerald-200 bg-emerald-50/70 p-5 shadow-sm">
-          <div className="flex items-center justify-between gap-3">
-            <p className="text-sm font-semibold text-emerald-800">
-              Aktif araç
-            </p>
-
-            <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-100 text-emerald-700">
-              <svg
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                aria-hidden="true"
-                className="h-5 w-5"
-              >
-                <circle cx="12" cy="12" r="9" />
-                <path d="m8 12 3 3 5-6" />
-              </svg>
-            </span>
-          </div>
-
-          <p className="mt-3 text-3xl font-extrabold text-emerald-800">
-            {activeCount}
-          </p>
-        </div>
-
-        {/* Pasif araç */}
-        <div className="rounded-2xl border border-rose-200 bg-rose-50/70 p-5 shadow-sm">
-          <div className="flex items-center justify-between gap-3">
-            <p className="text-sm font-semibold text-rose-800">
-              Pasif araç
-            </p>
-
-            <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-rose-100 text-rose-700">
-              <svg
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                aria-hidden="true"
-                className="h-5 w-5"
-              >
-                <circle cx="12" cy="12" r="9" />
-                <path d="M8 12h8" />
-              </svg>
-            </span>
-          </div>
-
-          <p className="mt-3 text-3xl font-extrabold text-rose-800">
-            {inactiveCount}
-          </p>
-        </div>
+          return (
+            <button
+              key={tab.value}
+              type="button"
+              aria-pressed={isActive}
+              onClick={() =>
+                updateOption(
+                  "fleetStatus",
+                  tab.value as VehicleListOptions["fleetStatus"],
+                )
+              }
+              className={`rounded-lg border px-4 py-2.5 text-sm font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-700 ${
+                isActive
+                  ? "border-emerald-200 bg-emerald-50 text-[#17674c]"
+                  : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
+              }`}
+            >
+              {tab.label} · {tab.count}
+            </button>
+          );
+        })}
       </div>
 
-      {/* Mobil filtre açma butonu */}
-      <button
-        type="button"
-        className="flex w-full items-center justify-between rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-800 shadow-sm lg:hidden"
-        aria-expanded={mobileFiltersOpen}
-        aria-controls="vehicle-filter-panel"
-        onClick={() =>
-          setMobileFiltersOpen((previous) => !previous)
-        }
-      >
-        <span>
-          Filtreler
-          {activeFilterCount > 0 && ` (${activeFilterCount})`}
-        </span>
+      {/* Araç arama */}
+      <div className="relative">
+        <label htmlFor="vehicle-search" className="sr-only">
+          Araç, plaka veya model ara
+        </label>
 
-        <span aria-hidden="true">
-          {mobileFiltersOpen ? "−" : "+"}
-        </span>
-      </button>
+        <svg
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1.8"
+          aria-hidden="true"
+          className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400"
+        >
+          <circle cx="11" cy="11" r="7" />
+          <path d="m16 16 4 4" />
+        </svg>
+
+        <input
+          id="vehicle-search"
+          type="search"
+          placeholder="Araç, plaka veya model ara..."
+          value={options.search}
+          onChange={(event) =>
+            updateOption("search", event.target.value)
+          }
+          className="w-full rounded-lg border border-slate-200 bg-white py-3.5 pl-12 pr-4 text-sm text-slate-900 outline-none placeholder:text-slate-400 focus:border-emerald-600 focus:ring-2 focus:ring-emerald-100"
+        />
+      </div>
+
+      {/* Filtre panelini açma / kapatma */}
+      <div className="flex items-center justify-between gap-3">
+        <button
+          type="button"
+          aria-expanded={mobileFiltersOpen}
+          aria-controls="vehicle-filter-panel"
+          onClick={() =>
+            setMobileFiltersOpen((previous) => !previous)
+          }
+          className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-[#13241f] transition-colors hover:border-emerald-300 hover:bg-emerald-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-700"
+        >
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.8"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            aria-hidden="true"
+            className="h-4 w-4"
+          >
+            <path d="M4 7h16M7 12h10M10 17h4" />
+          </svg>
+
+          <span>
+            Filtreler
+            {activeFilterCount > 0 && ` (${activeFilterCount})`}
+          </span>
+        </button>
+
+        <button
+          type="button"
+          onClick={resetFilters}
+          disabled={
+            !hasFilters &&
+            options.sortBy === defaultVehicleListOptions.sortBy
+          }
+          className="text-sm font-medium text-[#17674c] hover:underline disabled:cursor-not-allowed disabled:opacity-40"
+        >
+          Filtreleri Temizle
+        </button>
+      </div>
 
       {/* Sol sidebar + sağ araç listesi */}
-      <div className="grid items-start gap-6 lg:grid-cols-[260px_minmax(0,1fr)] xl:grid-cols-[280px_minmax(0,1fr)]">
-        {/* Filtre paneli */}
+      {/* Filtre paneli */}
+        <div className="space-y-5">        
         <aside
           id="vehicle-filter-panel"
-          className={`rounded-2xl border border-slate-200 bg-white p-5 shadow-sm ${
-            mobileFiltersOpen ? "block" : "hidden"
-          } lg:block`}
+          className={`rounded-lg border border-slate-200 bg-white p-5 ${
+          mobileFiltersOpen ? "block" : "hidden"
+          }`}
           aria-label="Araç filtreleri"
         >
           <div className="mb-6 flex items-center justify-between">
@@ -393,7 +313,7 @@ export default function VehicleList({
           ) : filteredVehicles.length === 0 ? (
             <VehicleEmptyState hasFilters={hasFilters} />
           ) : (
-            <div className="grid gap-6 md:grid-cols-2">
+            <div className="overflow-hidden rounded-xl border border-slate-200 bg-white">
               {filteredVehicles.map((vehicle) => (
                 <VehicleCard
                   key={vehicle.id}

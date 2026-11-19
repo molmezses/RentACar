@@ -1,25 +1,12 @@
 import type {
   FuelType,
   Transmission,
-  VehicleCategory,
   VehicleDisplayData,
 } from "@/types/vehicle";
-
-import VehicleStatusBadge from "./VehicleStatusBadge";
 
 type VehicleCardProps = {
   vehicle: VehicleDisplayData;
   onSelect?: (id: string) => void;
-};
-
-const categoryLabels: Record<VehicleCategory, string> = {
-  ECONOMY: "Ekonomi",
-  COMPACT: "Kompakt",
-  SEDAN: "Sedan",
-  SUV: "SUV",
-  LUXURY: "Lüks",
-  VAN: "Van",
-  OTHER: "Diğer",
 };
 
 const transmissionLabels: Record<Transmission, string> = {
@@ -43,7 +30,7 @@ function CarPlaceholder() {
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
       aria-hidden="true"
-      className="h-32 w-60 drop-shadow-lg"
+      className="h-12 w-20"
     >
       <ellipse
         cx="160"
@@ -100,118 +87,60 @@ export default function VehicleCard({
     maximumFractionDigits: 2,
   }).format(Number(vehicle.dailyPrice));
 
-  return (
-    <article className="group overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition-all duration-200 hover:-translate-y-1 hover:border-slate-300 hover:shadow-xl">
-      {/* Görsel alanı */}
-      <div className="relative flex h-40 items-center justify-center overflow-hidden bg-gradient-to-br from-slate-100 via-slate-50 to-blue-100">
-        <div className="absolute -right-12 -top-16 h-48 w-48 rounded-full bg-white/40 blur-2xl" />
-
-        <div className="relative transition-transform duration-300 group-hover:scale-105">
-          <CarPlaceholder />
-        </div>
-
-        <div className="absolute right-4 top-4">
-          <VehicleStatusBadge status={vehicle.fleetStatus} />
-        </div>
-
-        <span className="absolute bottom-3 left-4 rounded-lg border border-white bg-white/95 px-3 py-1.5 text-xs font-semibold text-slate-700 shadow-sm">
-          {categoryLabels[vehicle.category]}
-        </span>
+ 
+return (
+  <article className="border-b border-slate-200 bg-white px-4 py-5 last:border-b-0 sm:px-5 sm:py-6">
+    <div className="flex min-w-0 items-start gap-3 sm:gap-4">
+      {/* Küçük araç görseli */}
+      <div className="flex h-[72px] w-[72px] shrink-0 items-center justify-center overflow-hidden rounded-lg bg-[#edf3ef]">
+        <CarPlaceholder />
       </div>
 
       {/* Araç bilgileri */}
-      <div className="p-5">
-        <div className="flex items-start justify-between gap-3">
-          <div className="min-w-0">
-            <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">
-              {vehicle.modelYear} Model
-            </p>
+      <div className="min-w-0 flex-1 space-y-1">
+        <h3 className="text-sm font-semibold text-[#18352a] sm:text-base">
+          {vehicle.make} {vehicle.model}
+        </h3>
 
-            <h3 className="mt-1 text-xl font-bold tracking-tight text-slate-900">
-              {vehicle.make} {vehicle.model}
-            </h3>
-          </div>
+        <p className="text-sm text-slate-500">
+          {vehicle.plate}
+        </p>
 
-          <span className="shrink-0 rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1.5 text-xs font-bold text-slate-700">
-            {vehicle.plate}
-          </span>
-        </div>
-
-        {/* Teknik özellikler */}
-        <div className="mt-5 grid grid-cols-2 gap-3">
-          <div className="rounded-xl bg-slate-50 px-3 py-3">
-            <div className="mb-2 flex items-center gap-2 text-slate-500">
-              <svg
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="1.7"
-                aria-hidden="true"
-                className="h-4 w-4"
-              >
-                <circle cx="12" cy="12" r="3" />
-                <path d="M12 2v7m0 6v7M2 12h7m6 0h7" />
-              </svg>
-
-              <span className="text-xs">Vites</span>
-            </div>
-
-            <p className="text-sm font-bold text-slate-800">
-              {transmissionLabels[vehicle.transmission]}
-            </p>
-          </div>
-
-          <div className="rounded-xl bg-slate-50 px-3 py-3">
-            <div className="mb-2 flex items-center gap-2 text-slate-500">
-              <svg
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="1.7"
-                aria-hidden="true"
-                className="h-4 w-4"
-              >
-                <path d="M5 21V5a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v16M3 21h14M5 10h10M15 7l4 4v7a2 2 0 0 0 4 0v-6l-4-4" />
-              </svg>
-
-              <span className="text-xs">Yakıt</span>
-            </div>
-
-            <p className="text-sm font-bold text-slate-800">
-              {fuelLabels[vehicle.fuelType]}
-            </p>
-          </div>
-        </div>
-
-        {/* Fiyat ve aksiyon */}
-        <div className="mt-5 flex items-center justify-between gap-3 border-t border-slate-100 pt-4">
-          <div>
-            <p className="text-xs font-medium text-slate-500">
-              Günlük kiralama
-            </p>
-
-            <div className="mt-1 flex items-baseline gap-1">
-              <span className="text-2xl font-extrabold tracking-tight text-slate-900">
-                {price}
-              </span>
-
-              <span className="text-xs text-slate-400">
-                / gün
-              </span>
-            </div>
-          </div>
-
-          {onSelect && (
-            <button
-              type="button"
-              onClick={() => onSelect(vehicle.id)}
-              className="rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-blue-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600"
-            >
-              Detayları Gör
-            </button>
-          )}
-        </div>
+        <p className="text-xs text-slate-400">
+          {vehicle.modelYear} ·{" "}
+          {transmissionLabels[vehicle.transmission]} ·{" "}
+          {fuelLabels[vehicle.fuelType]}
+        </p>
       </div>
-    </article>
-  );
+
+      {/* Fiyat, durum ve detay */}
+      <div className="flex shrink-0 flex-col items-end gap-2 text-right">
+        <p className="text-sm font-semibold text-[#18352a] sm:text-base">
+          {price}
+        </p>
+
+        <span
+          className={`rounded-full px-2.5 py-1 text-xs font-medium ${
+            vehicle.fleetStatus === "ACTIVE"
+              ? "bg-emerald-50 text-emerald-700"
+              : "bg-red-50 text-red-600"
+          }`}
+        >
+          {vehicle.fleetStatus === "ACTIVE" ? "Aktif" : "Pasif"}
+        </span>
+
+        {onSelect && (
+          <button
+            type="button"
+            onClick={() => onSelect(vehicle.id)}
+            className="mt-2 inline-flex items-center gap-1 text-xs font-semibold text-[#17674c] hover:underline focus-visible:rounded-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-700 sm:text-sm"
+          >
+            Araç Detayı
+            <span aria-hidden="true">›</span>
+          </button>
+        )}
+      </div>
+    </div>
+  </article>
+);
 }

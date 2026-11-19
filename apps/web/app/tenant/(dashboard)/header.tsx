@@ -1,11 +1,18 @@
+"use client";
 
-type TenantHeaderProps = {
-  title: string;
-};
+import { usePathname } from "next/navigation";
 
-export default function TenantHeader({
-  title,
-}: TenantHeaderProps) {
+export default function TenantHeader() {
+  const pathname = usePathname();
+
+  let title = "Genel Bakış";
+
+  if (pathname === "/tenant/vehicles") {
+    title = "Araç Yönetimi";
+  } else if (pathname === "/tenant/vehicles/new") {
+    title = "Yeni Araç Ekle";
+  }
+
   return (
     <header className="flex min-h-20 items-center justify-between border-b border-slate-200 bg-white px-6 lg:px-10">
       <div>

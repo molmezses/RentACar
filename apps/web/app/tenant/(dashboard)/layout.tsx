@@ -24,8 +24,8 @@ async function TenantDashboardFrame({
         <TenantSidebar email={admin.email} />
 
         <div className="min-w-0 flex-1">
-          <TenantHeader title="Genel Bakış" />
-
+          <TenantHeader />
+          {/*Hangi Tenant sayfasına gidersek onun içeriğini gösterir*/}
           {children}
         </div>
       </div>

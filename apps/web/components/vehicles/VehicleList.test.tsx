@@ -2,7 +2,13 @@
 // @vitest-environment jsdom
 
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
+import {
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  within,
+} from "@testing-library/react";
 import "@testing-library/jest-dom/vitest";
 
 import VehicleList from "./VehicleList";
@@ -48,32 +54,33 @@ describe("VehicleList", () => {
   it("filters vehicles by search", () => {
     render(<VehicleList vehicles={mockVehicles} />);
 
-    fireEvent.click(screen.getByRole("button", { name: "Filo durumu" }));
-    fireEvent.click(screen.getByRole("button", { name: "Aktif" }));
+    fireEvent.change(
+      screen.getByRole("searchbox", {
+        name: "Araç, plaka veya model ara",
+      }),
+      {
+        target: { value: "Toyota" },
+      },
+    );
 
     expect(screen.getByText("Toyota Corolla")).toBeInTheDocument();
     expect(screen.queryByText("Renault Clio")).not.toBeInTheDocument();
   });
 
-  
-it("filters vehicles by fleet status", () => {
-  render(<VehicleList vehicles={mockVehicles} />);
+  it("filters vehicles by fleet status", () => {
+    render(<VehicleList vehicles={mockVehicles} />);
 
-  // Filtre menüsünü aç
-  fireEvent.click(
-    screen.getByRole("button", { name: "Filo durumu" }),
-  );
+    fireEvent.click(
+      screen.getByRole("button", { name: /Aktif · 1/ }),
+    );
 
-  // Aktif seçeneğini seç
-  fireEvent.click(
-    screen.getByRole("button", { name: "Aktif" }),
-  );
+    expect(screen.getByText("Toyota Corolla")).toBeInTheDocument();
+    expect(screen.queryByText("Renault Clio")).not.toBeInTheDocument();
 
-  // Yalnızca aktif araç kalmalı
-  expect(screen.getByText("Toyota Corolla")).toBeInTheDocument();
-  expect(screen.queryByText("Renault Clio")).not.toBeInTheDocument();
-});
-
+    expect(
+      screen.getByRole("button", { name: /Aktif · 1/ }),
+    ).toHaveAttribute("aria-pressed", "true");
+  });
 
   it("shows an empty state when there are no vehicles", () => {
     render(<VehicleList vehicles={[]} />);
@@ -84,9 +91,14 @@ it("filters vehicles by fleet status", () => {
   it("shows a no-results state when search finds nothing", () => {
     render(<VehicleList vehicles={mockVehicles} />);
 
-    fireEvent.change(screen.getByLabelText("Araç ara"), {
-      target: { value: "Ferrari" },
-    });
+    fireEvent.change(
+      screen.getByRole("searchbox", {
+        name: "Araç, plaka veya model ara",
+      }),
+      {
+        target: { value: "Ferrari" },
+      },
+    );
 
     expect(screen.getByText("Araç bulunamadı")).toBeInTheDocument();
   });
@@ -105,7 +117,9 @@ it("filters vehicles by fleet status", () => {
       />,
     );
 
-    expect(screen.getByText("Araç listesi alınamadı.")).toBeInTheDocument();
+    expect(
+      screen.getByText("Araç listesi alınamadı."),
+    ).toBeInTheDocument();
   });
 
   it("does not show unavailable actions", () => {
@@ -116,14 +130,19 @@ it("filters vehicles by fleet status", () => {
     ).not.toBeInTheDocument();
 
     expect(
-      screen.queryByRole("button", { name: "Detay" }),
+      screen.queryByRole("button", { name: "Araç Detayı" }),
     ).not.toBeInTheDocument();
   });
 
   it("passes the selected vehicle id to the callback", () => {
     const onView = vi.fn();
 
-    render(<VehicleList vehicles={mockVehicles} onView={onView} />);
+    render(
+      <VehicleList
+        vehicles={mockVehicles}
+        onView={onView}
+      />,
+    );
 
     const toyotaCard = screen
       .getByText("Toyota Corolla")
@@ -132,9 +151,28 @@ it("filters vehicles by fleet status", () => {
     expect(toyotaCard).not.toBeNull();
 
     fireEvent.click(
-      within(toyotaCard!).getByRole("button", { name: "Detayları Gör" })
+      within(toyotaCard!).getByRole("button", {
+        name: "Araç Detayı",
+      }),
     );
 
     expect(onView).toHaveBeenCalledWith("mock-vehicle-1");
+  });
+
+  it("calls onAdd when the add vehicle button is clicked", () => {
+    const onAdd = vi.fn();
+
+    render(
+      <VehicleList
+        vehicles={mockVehicles}
+        onAdd={onAdd}
+      />,
+    );
+
+    fireEvent.click(
+      screen.getByRole("button", { name: /araç ekle/i }),
+    );
+
+    expect(onAdd).toHaveBeenCalledOnce();
   });
 });

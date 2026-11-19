@@ -322,7 +322,7 @@ export default function VehicleForm({
                         event.target.value as VehicleFormValues[typeof field.name],
                       )
                     }
-                    className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                    className="w-full rounded-lg border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition-colors placeholder:text-slate-400 focus:border-[#17674c] focus:ring-2 focus:ring-emerald-100"
                   >
                     <option value="">Seçiniz</option>
                     {selectOptions[field.name].map(([value, label]) => (
@@ -343,7 +343,7 @@ export default function VehicleForm({
                     onChange={(event) =>
                       updateField(field.name, event.target.value)
                     }
-                    className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none transition-colors focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                    className="w-full rounded-lg border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition-colors placeholder:text-slate-400 focus:border-[#17674c] focus:ring-2 focus:ring-emerald-100"
                   />
                 )}
 
@@ -368,7 +368,7 @@ export default function VehicleForm({
                 onChange={(event) =>
                   updateField("hasAirConditioning", event.target.checked)
                 }
-                className="h-4 w-4 accent-blue-600"
+                className="h-4 w-4 accent-[#17674c]"
               />
               Klima var
             </label>
@@ -394,7 +394,7 @@ export default function VehicleForm({
                 onChange={(event) =>
                   updateField("notes", event.target.value)
                 }
-                className="w-full resize-y rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                className="w-full resize-y rounded-lg border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition-colors placeholder:text-slate-400 focus:border-[#17674c] focus:ring-2 focus:ring-emerald-100"
               />
 
               {errors.notes && (
@@ -410,28 +410,29 @@ export default function VehicleForm({
           )}
         </VehicleFormSection>
       ))}
-
+    
       {/* Kaydet ve iptal */}
-      <div className="flex flex-wrap items-center justify-end gap-3 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+      <div className="flex flex-wrap items-center justify-center gap-3 border-t border-slate-200 px-5 py-5 sm:px-6">
+        <button
+          type="submit"
+          disabled={isSubmitting}
+          className="inline-flex min-h-12 items-center justify-center rounded-xl bg-[#176548] px-6 py-3 text-sm font-semibold text-white transition-colors hover:bg-[#14533b] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#176548] disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          {isSubmitting ? "İşleniyor..." : submitLabel}
+        </button>
+
         {onCancel && (
           <button
             type="button"
             onClick={onCancel}
             disabled={isSubmitting}
-            className="rounded-xl border border-slate-300 bg-white px-5 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+            className="inline-flex min-h-12 items-center justify-center rounded-xl border border-slate-200 bg-white px-6 py-3 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-400 disabled:cursor-not-allowed disabled:opacity-50"
           >
             İptal
           </button>
         )}
-
-        <button
-          type="submit"
-          disabled={isSubmitting}
-          className="rounded-xl bg-slate-900 px-6 py-3 text-sm font-semibold text-white transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
-        >
-          {isSubmitting ? "İşleniyor..." : submitLabel}
-        </button>
       </div>
     </form>
   );
 }
+

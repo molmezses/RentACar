@@ -26,21 +26,25 @@ export function validateVehicleForm(
 
   // Zorunlu metinler ve uzunluk sınırları
   const textFields = {
-    plate: [2, 20],
-    make: [1, 60],
-    model: [1, 80],
+  plate: { label: "Plaka", min: 2, max: 20 },
+  make: { label: "Marka", min: 1, max: 60 },
+  model: { label: "Model", min: 1, max: 80 },
   } as const;
 
   for (const field of Object.keys(textFields) as Array<
     keyof typeof textFields
   >) {
-    const [min, max] = textFields[field];
+    const { label, min, max } = textFields[field];
     const value = values[field].trim();
 
-    if (value.length < min || value.length > max) {
-      errors[field] = `${min}-${max} karakter olmalı.`;
+    if (!value) {
+      errors[field] = `${label} alanı zorunludur.`;
+    } else if (value.length < min || value.length > max) {
+      errors[field] =
+        `${label} ${min} ile ${max} karakter arasında olmalıdır.`;
     }
   }
+
 
   // Uluslararası plaka karakter kontrolü
   if (
@@ -94,57 +98,74 @@ export function validateVehicleForm(
 
   // Tam sayı doğrulama yardımcısı
   function checkInteger(
-    field: "modelYear" | "seatCount" | "doorCount" |
-      "odometerKm" | "includedMileageKm",
+    field:
+      | "modelYear"
+      | "seatCount"
+      | "doorCount"
+      | "odometerKm"
+      | "includedMileageKm",
+    label: string,
     min: number,
     max: number,
     required = false,
   ) {
     const value = values[field].trim();
 
-    if (!value && !required) return;
+    if (!value) {
+      if (required) {
+        errors[field] = `${label} alanı zorunludur.`;
+      }
+      return;
+    }
 
     const number = Number(value);
 
     if (
-      !value ||
       !/^\d+$/.test(value) ||
       !Number.isSafeInteger(number) ||
       number < min ||
       number > max
     ) {
-      errors[field] = `Geçerli bir değer girin (${min}-${max}).`;
+      errors[field] =
+        `${label} ${min} ile ${max} arasında bir tam sayı olmalıdır.`;
     }
   }
 
-  checkInteger("modelYear", 1950, new Date().getFullYear() + 1, true);
-  checkInteger("seatCount", 1, 20, true);
-  checkInteger("doorCount", 1, 8);
-  checkInteger("odometerKm", 0, Number.MAX_SAFE_INTEGER, true);
-  checkInteger("includedMileageKm", 0, Number.MAX_SAFE_INTEGER);
+  checkInteger("modelYear", "Model yılı", 1950, new Date().getFullYear() + 1, true);
+  checkInteger("seatCount", "Koltuk sayısı", 1, 20, true);
+  checkInteger("doorCount", "Kapı sayısı", 1, 8);
+  checkInteger("odometerKm", "Kilometre", 0, Number.MAX_SAFE_INTEGER, true);
+  checkInteger("includedMileageKm", "Dahil kilometre", 0, Number.MAX_SAFE_INTEGER);
 
   // Parasal değerleri Number'a dönüştürmeden doğrula
   function checkMoney(
     field: "dailyPrice" | "depositAmount" | "extraKmPrice",
+    label: string,
     required = false,
     positive = false,
   ) {
     const value = values[field].trim();
 
-    if (!value && !required) return;
+    if (!value) {
+      if (required) {
+        errors[field] = `${label} alanı zorunludur.`;
+      }
+      return;
+    }
 
-    // Decimal(12,2): en fazla 10 tam, 2 ondalık basamak
+    // Decimal(12,2): en fazla 10 tam ve 2 ondalık basamak
     const validFormat = /^(?:0|[1-9]\d{0,9})(?:\.\d{1,2})?$/.test(value);
     const zero = /^0(?:\.0{1,2})?$/.test(value);
 
     if (!validFormat || (positive && zero)) {
-      errors[field] = "Geçerli bir tutar girin.";
+      errors[field] = positive
+        ? `${label} sıfırdan büyük olmalı ve en fazla 2 ondalık basamak içermelidir.`
+        : `${label} geçerli bir tutar olmalı ve en fazla 2 ondalık basamak içermelidir.`;
     }
   }
-
-  checkMoney("dailyPrice", true, true);
-  checkMoney("depositAmount");
-  checkMoney("extraKmPrice");
+  checkMoney("dailyPrice", "Günlük fiyat", true, true);
+  checkMoney("depositAmount", "Depozito");
+  checkMoney("extraKmPrice", "Ek kilometre ücreti");
 
   return errors;
 }

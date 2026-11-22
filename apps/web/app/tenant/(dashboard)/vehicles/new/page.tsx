@@ -27,18 +27,14 @@ export default function TenantVehicleCreatePage() {
           <h1 className="text-2xl font-semibold text-[#172e26]">
             Yeni Araç Ekle
           </h1>
-
-          <p className="mt-2 text-sm text-slate-500">
-            Filonuza eklemek istediğiniz aracın bilgilerini girin.
-          </p>
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-slate-500">
+            <p>Filonuza eklemek istediğiniz aracın bilgilerini girin.
+              <span
+                className="font-semibold text-rose-600"
+                aria-hidden="true"> *
+              </span>{" "}  işaretli alanların doldurulması zorunludur. Diğer alanlar isteğe bağlıdır. </p>
+          </div>
         </div>
-
-        <div
-          role="note"
-          className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
-          <p className="font-semibold">Araç bilgilerini girerek formu kontrol edebilirsiniz.Bu aşamada gerçek araç kaydı yapılmaz.</p>
-        </div>
-
         {submittedVehicle && (
           <div
             role="status"

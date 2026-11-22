@@ -123,7 +123,7 @@ export type VehicleFormValues = {
 
   seatCount: string;
   doorCount: string;
-  hasAirConditioning: boolean;
+  hasAirConditioning: boolean | null;
 
   odometerKm: string;
   currentLocationLabel: string;

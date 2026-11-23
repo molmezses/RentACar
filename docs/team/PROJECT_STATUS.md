@@ -54,9 +54,10 @@ D1–D4 kapsamında geliştirilen araç ekranları henüz gerçek Vehicle API il
 
 - G1: Tamamlandı, PR #74 ile `main` branch'ine merge edildi.
 
-- G2: Frontend geliştirmesi tamamlandı; PR inceleme/onay sürecinde.
+- G2: Tamamlandı, main branch'ine merge edildi.
 
-- F3–F9: Backend ağırlıklı planlanan görevler.
+- F3: Geliştirme ve testler tamamlandı; PR hazırlığında, henüz merge edilmedi.
+- F4–F9: Backend ağırlıklı planlanan görevler.
 
 - G3–G9: Frontend ağırlıklı planlanan görevler.
 
@@ -65,6 +66,17 @@ Tüm F/G görevleri tamamlandı anlamına gelmez. Güncel ilerleme için GitHub 
 **Çalışma prensibi:** Mevcut MVP kapsamı ve onaylanan API sözleşmesi esas alınacaktır. Ek özellikler ihtiyaç oluştuğunda ayrı issue'lar üzerinden planlanacaktır. Mevcut issue'ların kapsamı gereksiz yere büyütülmeyecektir.
 
 ## 4. Mimari Kurallar
+
+### PR durumlarının takibi
+
+Bu dosya geliştirme kapsamını, teknik kararları ve test sonuçlarını belgeler.
+
+PR'ın açık, incelemede veya merge edilmiş olup olmadığının
+güncel kaynağı GitHub'dır.
+
+Bu dosyada PR'ın geçici durumları tutulmaz.
+Bir geliştirmenin main branch'inde kullanılabilir olup olmadığı,
+GitHub merge durumu ve güncel main kodundan doğrulanmalıdır.
 
 ### Tenant izolasyonu
 
@@ -86,7 +98,7 @@ Tüm F/G görevleri tamamlandı anlamına gelmez. Güncel ilerleme için GitHub 
 
 - Frontend tipleri: `apps/web/types/vehicle.ts`
 
-- Vehicle API henüz uygulanmadı.
+- Vehicle listeleme ve detay API'si F3 kapsamında geliştirildi; henüz main branch'ine merge edilmedi.
 
 - Vehicle modeli her aracın bir Tenant'a ait olacağı şekilde tasarlanmıştır.
 
@@ -370,9 +382,8 @@ F3 — Tenant Vehicle listeleme ve detay API geliştirmesi.
 
 - **Commit:** `8e2d061`
 
-- **PR:** İnceleme/onay sürecinde; merge edilmedi
-
-- **Durum:** Frontend geliştirmesi ve yerel doğrulamalar tamamlandı
+- **PR:** Merge edildi
+- **Durum:** Tamamlandı, main branch'ine merge edildi
 
 ### Yapılan değişiklikler
 
@@ -449,6 +460,82 @@ Yeni bağımlılık veya environment değişkeni eklenmedi.
 ### Sonraki bağımlı görev
 
 G5 — Gerçek Vehicle API entegrasyonu.
+
+## F3 — Tenant Vehicle Read API
+
+- **Sorumlu:** Mustafa
+- **Branch:** `feature/f3-tenant-vehicle-read-api`
+- **PR:** Güncel durum için GitHub PR kaydına bakılmalı
+- **Durum:** Geliştirme ve yerel testler tamamlandı
+
+### Yapılan değişiklikler
+
+- Tenant Admin için araç listeleme ve detay endpoint'leri geliştirildi.
+- JWT tabanlı Tenant doğrulaması ve Tenant izolasyonu uygulandı.
+- Araç listelemesine pagination, arama, filtreleme ve sıralama eklendi.
+- Araç yanıtları için Response Mapper ve Swagger DTO'ları oluşturuldu.
+- Para alanları iki ondalıklı string biçimine dönüştürüldü.
+- Tenant Admin yanıtlarından `tenantId` çıkarıldı.
+- Başka Tenant'a ait araç detayları için 404 davranışı uygulandı.
+
+### Değişen temel dosyalar
+
+- `apps/api/src/app.module.ts`
+- `apps/api/src/vehicles/`
+
+### Yeni veya değişen API
+
+- `GET /tenant/vehicles`
+- `GET /tenant/vehicles/:id`
+
+Listeleme parametreleri:
+
+- `page`, `limit`, `search`
+- `category`, `fleetStatus`, `transmission`, `fuelType`
+- `sortBy`, `sortOrder`
+
+Listeleme yanıtı:
+
+```json
+{
+  "items": [],
+  "pagination": {
+    "page": 1,
+    "limit": 20,
+    "total": 0,
+    "totalPages": 0
+  }
+}
+```
+
+### Migration
+
+Yok. F2'de oluşturulan Prisma Vehicle modeli kullanıldı.
+
+### Environment/dependency değişiklikleri
+
+Yeni environment değişkeni veya bağımlılık eklenmedi.
+
+### Test sonuçları
+
+- `npm run build` — Başarılı
+- `npx vitest run` — 22 dosyada 120 test başarılı
+- F3 kapsamında 24 yeni otomatik test eklendi.
+- Swagger üzerinden yetkisiz ve yetkili listeleme istekleri kontrol edildi.
+- Gerçek veritabanında iki Tenant ile uçtan uca izolasyon testi henüz yapılmadı.
+
+### Diğer geliştiricinin yapması gerekenler
+
+- Frontend entegrasyonunda `docs/architecture/vehicle-api-contract.md` esas alınmalı.
+- Listeleme yanıtı `items` ve `pagination` alanlarını içerir.
+- Para alanları decimal string biçimindedir.
+- Tenant Admin araç yanıtlarında `tenantId` bulunmaz.
+- Frontend demo sıralamasındaki `modelYear` yerine API sözleşmesindeki sıralama alanları kullanılmalıdır.
+- Araç oluşturma ve güncelleme endpoint'leri F3 kapsamında değildir.
+
+### Sonraki bağımlı görev
+
+F4 — GitHub issue kapsamı doğrulanarak başlanacak.
 
 ## 8. PR Sonrası Güncelleme Kuralı
 

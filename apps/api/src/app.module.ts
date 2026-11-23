@@ -9,6 +9,7 @@ import { TenantsModule } from './tenants/tenants.module.js';
 import { TenantApplicationsModule } from './tenant-applications/tenant-applications.module.js';
 import { AuthModule } from './auth/auth.module.js';
 import { InvitationDeliveryModule } from './invitation-delivery/invitation-delivery.module.js';
+import { VehiclesModule } from './vehicles/vehicles.module.js';
 
 @Module({
   imports: [
@@ -17,6 +18,7 @@ import { InvitationDeliveryModule } from './invitation-delivery/invitation-deliv
     TenantApplicationsModule,
     AuthModule,
     InvitationDeliveryModule,
+    VehiclesModule,
   ],
   controllers: [AppController],
   providers: [AppService],

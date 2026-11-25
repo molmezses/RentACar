@@ -1,4 +1,4 @@
-import type { Prisma } from '../../generated/prisma/client.js';
+import { FleetStatus, type Prisma } from '../../generated/prisma/client.js';
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service.js';
 import type { ListVehiclesQueryDto } from './dto/list-vehicles-query.dto.js';
@@ -89,6 +89,46 @@ export class VehiclesService {
   }
 
   async findOneForTenant(tenantId: string, vehicleId: string) {
+    const vehicle = await this.prisma.vehicle.findFirst({
+      where: {
+        id: vehicleId,
+        tenantId,
+      },
+    });
+
+    if (!vehicle) {
+      throw new NotFoundException('Vehicle not found');
+    }
+
+    return toTenantVehicleResponse(vehicle);
+  }
+
+  //id doğru mu ? araç bu tenanta ait mi? araç beklenen önceki durumda mı?
+  async updateStatusForTenant(
+    tenantId: string,
+    vehicleId: string,
+    fleetStatus: FleetStatus,
+  ) {
+    const previousStatus =
+      fleetStatus === FleetStatus.ACTIVE
+        ? FleetStatus.INACTIVE
+        : FleetStatus.ACTIVE;
+
+    await this.prisma.vehicle.updateMany({
+      where: {
+        id: vehicleId,
+        tenantId,
+        fleetStatus: previousStatus,
+      },
+      data: {
+        fleetStatus,
+        deactivatedAt:
+          fleetStatus === FleetStatus.INACTIVE
+            ? new Date()
+            : null,
+      },
+    });
+
     const vehicle = await this.prisma.vehicle.findFirst({
       where: {
         id: vehicleId,

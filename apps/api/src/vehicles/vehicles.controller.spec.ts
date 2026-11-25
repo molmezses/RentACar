@@ -20,10 +20,12 @@ vi.mock('../auth/tenant-auth-context.js', () => ({
 describe('VehiclesController', () => {
   const findAllForTenant = vi.fn();
   const findOneForTenant = vi.fn();
+  const updateStatusForTenant = vi.fn();
 
   const service = {
     findAllForTenant,
     findOneForTenant,
+    updateStatusForTenant,
   } as unknown as VehiclesService;
 
   const controller = new VehiclesController(service);
@@ -51,6 +53,12 @@ describe('VehiclesController', () => {
     findOneForTenant.mockResolvedValue({
       id: 'vehicle_1',
       plate: '34 ABC 123',
+    });
+
+    updateStatusForTenant.mockResolvedValue({
+      id: 'vehicle_1',
+      fleetStatus: 'INACTIVE',
+      deactivatedAt: '2026-11-25T17:00:00.000Z',
     });
   });
 
@@ -116,4 +124,62 @@ describe('VehiclesController', () => {
 
     expect(findAllForTenant).not.toHaveBeenCalled();
   });
+
+
+it('durum güncellemede tenantId değerini oturumdan alır', async () => {
+  const request = createRequest('tenant_a');
+
+  const body = {
+    fleetStatus: 'INACTIVE' as const,
+  };
+
+  await controller.updateStatus(
+    request,
+    'vehicle_1',
+    body,
+  );
+
+  expect(updateStatusForTenant).toHaveBeenCalledWith(
+    'tenant_a',
+    'vehicle_1',
+    'INACTIVE',
+  );
+});
+
+
+it('durum güncelleme sonucunu değiştirmeden döndürür', async () => {
+  const request = createRequest('tenant_a');
+
+  const body = {
+    fleetStatus: 'INACTIVE' as const,
+  };
+
+  const result = await controller.updateStatus(
+    request,
+    'vehicle_1',
+    body,
+  );
+
+  expect(result).toEqual({
+    id: 'vehicle_1',
+    fleetStatus: 'INACTIVE',
+    deactivatedAt: '2026-11-25T17:00:00.000Z',
+  });
+});
+
+
+it('durum güncellemede Tenant oturumu yoksa isteği reddeder', async () => {
+  const request = {} as TenantAuthenticatedRequest;
+
+  await expect(
+    controller.updateStatus(
+      request,
+      'vehicle_1',
+      { fleetStatus: 'INACTIVE' },
+    ),
+  ).rejects.toThrow(UnauthorizedException);
+
+  expect(updateStatusForTenant).not.toHaveBeenCalled();
+});
+
 });

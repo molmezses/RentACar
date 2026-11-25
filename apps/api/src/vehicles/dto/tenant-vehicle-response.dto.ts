@@ -71,6 +71,15 @@ export class TenantVehicleResponseDto {
   @ApiProperty({ enum: FleetStatus })
   fleetStatus!: FleetStatus;
 
+  @ApiProperty({
+    description: 'Aracın pasifleştirildiği tarih',
+    type: String,
+    format: 'date-time',
+    nullable: true,
+    example: '2026-11-25T16:00:00.000Z'
+  })
+  deactivatedAt!: string | null;
+
   @ApiProperty({ type: String, nullable: true })
   vin!: string | null;
 

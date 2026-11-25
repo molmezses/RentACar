@@ -1,4 +1,4 @@
-import { Controller, Get, Param, Query, Req, UseGuards } from '@nestjs/common';
+import { Controller, Body, Get, Param, Patch, Query, Req, UseGuards } from '@nestjs/common';
 import {
   ApiBearerAuth,
   ApiOperation,
@@ -18,6 +18,7 @@ import { ListVehiclesQueryDto } from './dto/list-vehicles-query.dto.js';
 
 import { VehicleListResponseDto } from './dto/vehicle-list-response.dto.js';
 import { TenantVehicleResponseDto } from './dto/tenant-vehicle-response.dto.js';
+import { UpdateVehicleStatusDto } from './dto/update-vehicle-status.dto.js';
 
 @ApiTags('Tenant Vehicles')
 @ApiBearerAuth()
@@ -83,4 +84,40 @@ export class VehiclesController {
 
     return this.vehiclesService.findOneForTenant(auth.tenantId, vehicleId);
   }
+
+  
+@Patch(':id/status')
+@ApiOperation({
+  summary: 'Tenant aracının aktif/pasif durumunu günceller',
+})
+@ApiResponse({
+  status: 200,
+  description: 'Araç durumu başarıyla güncellendi.',
+  type: TenantVehicleResponseDto,
+})
+@ApiResponse({
+  status: 400,
+  description: 'Geçersiz araç durumu veya istek gövdesi.',
+})
+@ApiResponse({
+  status: 401,
+  description: 'Kimlik doğrulama gerekli.',
+})
+@ApiResponse({
+  status: 404,
+  description: 'Araç bulunamadı.',
+})
+async updateStatus(
+  @Req() request: TenantAuthenticatedRequest,
+  @Param('id') vehicleId: string,
+  @Body() body: UpdateVehicleStatusDto,
+) {
+  const auth = getTenantAuthContext(request);
+
+  return this.vehiclesService.updateStatusForTenant(
+    auth.tenantId,
+    vehicleId,
+    body.fleetStatus,
+  );
+}
 }

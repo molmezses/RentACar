@@ -13,6 +13,7 @@ import "@testing-library/jest-dom/vitest";
 
 import VehicleList from "./VehicleList";
 import { mockVehicles } from "@/lib/vehicles/mock-data";
+import { defaultVehicleListOptions } from "@/lib/vehicles/list-utils";
 
 afterEach(() => {
   cleanup();
@@ -175,4 +176,138 @@ describe("VehicleList", () => {
 
     expect(onAdd).toHaveBeenCalledOnce();
   });
+
+
+it("does not filter API results locally in server mode", () => {
+  render(
+    <VehicleList
+      vehicles={mockVehicles}
+      serverMode
+      options={{
+        ...defaultVehicleListOptions,
+        search: "Ferrari",
+      }}
+    />,
+  );
+
+  // API sonuçlarını frontend tekrar filtrelememeli.
+  expect(screen.getByText("Toyota Corolla")).toBeInTheDocument();
+  expect(screen.getByText("Renault Clio")).toBeInTheDocument();
+});
+
+it("notifies the parent when a filter changes in server mode", () => {
+  const onOptionsChange = vi.fn();
+
+  render(
+    <VehicleList
+      vehicles={[]}
+      serverMode
+      options={{ ...defaultVehicleListOptions }}
+      onOptionsChange={onOptionsChange}
+    />,
+  );
+
+  fireEvent.change(
+    screen.getByRole("searchbox", {
+      name: "Araç, plaka veya model ara",
+    }),
+    {
+      target: { value: "Toyota" },
+    },
+  );
+
+  expect(onOptionsChange).toHaveBeenCalledWith({
+    ...defaultVehicleListOptions,
+    search: "Toyota",
+  });
+});
+
+it("uses API pagination to navigate between pages", () => {
+  const onPageChange = vi.fn();
+
+  render(
+    <VehicleList
+      vehicles={mockVehicles}
+      serverMode
+      options={{ ...defaultVehicleListOptions }}
+      pagination={{
+        page: 1,
+        limit: 20,
+        total: 35,
+        totalPages: 2,
+      }}
+      onPageChange={onPageChange}
+    />,
+  );
+
+  // İlk sayfadayız.
+  expect(
+    screen.getByRole("button", { name: "Önceki" }),
+  ).toBeDisabled();
+
+  // Sayfa numaraları görünmeli.
+  expect(
+    screen.getByRole("button", { name: "Sayfa 1" }),
+  ).toHaveAttribute("aria-current", "page");
+
+  expect(
+    screen.getByRole("button", { name: "Sayfa 2" }),
+  ).toBeEnabled();
+
+  // Sonraki butonu ikinci sayfaya geçmeli.
+  fireEvent.click(
+    screen.getByRole("button", { name: "Sonraki" }),
+  );
+
+  expect(onPageChange).toHaveBeenCalledWith(2);
+
+  // Kullanıcı doğrudan ikinci sayfaya da gidebilmeli.
+  fireEvent.click(
+    screen.getByRole("button", { name: "Sayfa 2" }),
+  );
+
+  expect(onPageChange).toHaveBeenLastCalledWith(2);
+
+  // Eski tasarımdaki toplam araç metni artık bulunmamalı.
+  expect(screen.queryByText(/Toplam 35 araç/)).not.toBeInTheDocument();
+});
+
+
+it("disables the next button on the last page", () => {
+  const onPageChange = vi.fn();
+
+  render(
+    <VehicleList
+      vehicles={mockVehicles}
+      serverMode
+      options={{ ...defaultVehicleListOptions }}
+      pagination={{
+        page: 2,
+        limit: 20,
+        total: 35,
+        totalPages: 2,
+      }}
+      onPageChange={onPageChange}
+    />,
+  );
+
+  expect(
+    screen.getByRole("button", { name: "Sonraki" }),
+  ).toBeDisabled();
+
+  expect(
+    screen.getByRole("button", { name: "Önceki" }),
+  ).toBeEnabled();
+
+  expect(
+    screen.getByRole("button", { name: "Sayfa 2" }),
+  ).toHaveAttribute("aria-current", "page");
+
+  fireEvent.click(
+    screen.getByRole("button", { name: "Önceki" }),
+  );
+
+  expect(onPageChange).toHaveBeenCalledWith(1);
+});
+
 });

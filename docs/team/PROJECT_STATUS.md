@@ -59,7 +59,8 @@ D1–D4 kapsamında geliştirilen araç ekranları henüz gerçek Vehicle API il
 - F3: Geliştirme ve testler tamamlandı; PR hazırlığında, henüz merge edilmedi.
 - F4–F9: Backend ağırlıklı planlanan görevler.
 
-- G3–G9: Frontend ağırlıklı planlanan görevler.
+- G3: Geliştirme ve temel testler tamamlandı; PR hazırlığında.
+- G4–G9: Frontend ağırlıklı planlanan görevler.
 
 Tüm F/G görevleri tamamlandı anlamına gelmez. Güncel ilerleme için GitHub issue ve PR durumları kontrol edilmelidir.
 
@@ -539,37 +540,72 @@ F4 — GitHub issue kapsamı doğrulanarak başlanacak.
 
 ## 8. PR Sonrası Güncelleme Kuralı
 
-Her PR, merge edilmeden önce bu dosyada ilgili kısa durum güncellemesini içermelidir.
+## G3 — Tenant Vehicle List API Integration
 
-Kayıt biçimi:
+- **Sorumlu:** Eda
+- **Branch:** `feature/g3-vehicle-list-api-integration`
+- **PR:** Henüz oluşturulmadı
+- **Durum:** Geliştirme ve temel testler tamamlandı; PR hazırlığında, henüz merge edilmedi.
 
-### [Görev kodu] — [Kısa başlık]
+### Yapılan değişiklikler
 
-- Sorumlu:
+- Tenant Admin araç listesi mock veriler yerine gerçek Vehicle API'ye bağlandı.
+- HttpOnly access cookie kullanan Next.js API proxy oluşturuldu.
+- Arama, kategori, filo durumu, vites ve yakıt filtreleri backend'e taşındı.
+- Sıralama, F1 API sözleşmesine uygun olarak sunucu tarafında gerçekleştirildi.
+- Sayfalama, backend'in döndürdüğü `pagination` bilgisine bağlandı.
+- Önceki, Sonraki ve numaralı sayfa navigasyonu eklendi.
+- Filtrelerin ve sayfa numarasının URL ile senkronizasyonu sağlandı.
+- Yükleniyor, boş liste, filtre sonucu bulunamadı ve hata durumları korundu.
+- 401 oturum hatası ve 403 yetki hatası için ayrı davranışlar eklendi.
+- Araç listesi tasarımı Tenant Admin renkleriyle uyumlu hâle getirildi.
 
-- PR:
+### Değişen temel dosyalar
 
-- Durum:
+- `apps/web/app/api/tenant/vehicles/route.ts`
+- `apps/web/app/tenant/(dashboard)/vehicles/page.tsx`
+- `apps/web/app/tenant/(dashboard)/vehicles/vehicle-list-client.tsx`
+- `apps/web/components/vehicles/VehicleList.tsx`
+- `apps/web/components/vehicles/VehicleList.test.tsx`
+- `apps/web/components/vehicles/VehicleEmptyState.tsx`
+- `apps/web/lib/vehicles/api.ts`
+- `apps/web/lib/vehicles/api.test.ts`
+- `apps/web/lib/vehicles/list-utils.ts`
 
-- Yapılan değişiklik:
+### Yeni veya değişen API
 
-- Değişen temel dosyalar:
+- Yeni Next.js proxy: `GET /api/tenant/vehicles`
+- Kullanılan backend endpoint'i: `GET /tenant/vehicles`
+- Backend API sözleşmesi değiştirilmedi.
 
-- Yeni veya değişen API:
+### Migration
 
-- Migration:
+Yok. Mevcut F2 Vehicle modeli ve F3 listeleme API'si kullanıldı.
 
-- Environment/dependency değişiklikleri:
+### Environment/dependency değişiklikleri
 
-- Test sonuçları:
+Yeni bağımlılık veya zorunlu environment değişkeni eklenmedi.
 
-- Diğer geliştiricinin yapması gerekenler:
+### Test sonuçları
 
-- Sonraki bağımlı görev:
+- `npx tsc --noEmit` — Başarılı.
+- `npm run lint` — Başarılı.
+- `npx vitest run` — 5 dosyada 45 test başarılı.
+- `npm run build` — Başarılı (son tasarım değişikliklerinden önce).
+- URL filtrelerinin korunması ve tarayıcı geri/ileri davranışı manuel doğrulandı.
+- Yerel geliştirme veritabanında 25 örnek araçla listeleme, sayfalama, SUV filtresi ve eşleşmeyen filtre kombinasyonu başarıyla kontrol edildi.
+- Gerçek araçlarla 401/403 ve sunucu hatası senaryoları henüz ayrıca doğrulanmadı.
 
-Yeni görevlerin mevcut açıklamalarını tekrar tekrar bu dosyaya kopyalamayın. Yalnızca tamamlanan kararları, önemli değişiklikleri ve diğer geliştiriciyi etkileyen bilgileri kaydedin.
+### Diğer geliştiricinin yapması gerekenler
 
-Birden fazla PR aynı dosyayı değiştiriyorsa Git conflict çözümünde her iki tarafın geçerli kayıtları korunmalıdır.
+- F3 listeleme API'sinin parametreleri ve yanıt biçimi korunmalıdır.
+- `tenantId` frontend tarafından gönderilmemelidir.
+- Araç fiyatları decimal string olarak döndürülmelidir.
+- G3 kapsamında araç oluşturma, düzenleme veya filo durumu değiştirme API'si geliştirilmedi.
+
+### Sonraki bağımlı görev
+
+G4 ve sonraki frontend görevleri, ilgili GitHub issue kapsamı ve backend bağımlılıkları kontrol edilerek ele alınacaktır.
 
 ## 9. Geliştirme Asistanları İçin Çalışma Yöntemi
 

@@ -3,7 +3,7 @@
 import EmptyState from "@/components/ui/empty-state";
 
 type VehicleEmptyStateProps = {
-  hasFilters?: boolean;   //araç olup olmama durumu
+  hasFilters?: boolean;   // Arama veya filtre uygulanmış mı?
 };
 
 export default function VehicleEmptyState({

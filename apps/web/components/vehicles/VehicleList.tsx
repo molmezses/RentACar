@@ -24,6 +24,18 @@ type VehicleListProps = {
   error?: string | null;
   onView?: (id: string) => void;
   onAdd?: () => void;
+
+  serverMode?: boolean;
+  options?: VehicleListOptions;
+  onOptionsChange?: (options: VehicleListOptions) => void;
+
+  pagination?: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+  } | null;
+  onPageChange?: (page: number) => void;
 };
 
 export default function VehicleList({
@@ -32,17 +44,28 @@ export default function VehicleList({
   error = null,
   onView,
   onAdd,
+  serverMode = false,
+  options: controlledOptions,
+  onOptionsChange,
+  pagination = null,
+  onPageChange,
 }: VehicleListProps) {
-  const [options, setOptions] = useState<VehicleListOptions>({
+  const [localOptions, setLocalOptions] = useState<VehicleListOptions>({
     ...defaultVehicleListOptions,
   });
+
+  const options = serverMode
+    ? (controlledOptions ?? localOptions)
+    : localOptions;
 
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
 
   // Arama, filtreleme ve sıralama
   const filteredVehicles = useMemo(
-    () => filterAndSortVehicles(vehicles, options),
-    [vehicles, options],
+    () => serverMode
+      ? vehicles
+      : filterAndSortVehicles(vehicles, options),
+  [vehicles, options, serverMode],
   );
 
   const hasFilters = Boolean(
@@ -68,23 +91,56 @@ export default function VehicleList({
 
   // Filtre değerini güncelle
   function updateOption<K extends keyof VehicleListOptions>(
-    key: K,
-    value: VehicleListOptions[K],
-  ) {
-    setOptions((previous) => ({
-      ...previous,
-      [key]: value,
-    }));
+  key: K,
+  value: VehicleListOptions[K],
+) {
+  const nextOptions = {
+    ...options,
+    [key]: value,
+  };
+
+  if (serverMode) {
+    onOptionsChange?.(nextOptions);
+  } else {
+    setLocalOptions(nextOptions);
   }
+}
 
   // Sıralamayı koruyarak filtreleri temizle
   function resetFilters() {
-  setOptions({ ...defaultVehicleListOptions });
+  const nextOptions = { ...defaultVehicleListOptions };
+
+  if (serverMode) {
+    onOptionsChange?.(nextOptions);
+  } else {
+    setLocalOptions(nextOptions);
+  }
 }
 
   // Sol filtre paneli
   const filterControls = (
     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
+      <VehicleFilterSelect
+        label="Araç kategorisi"
+        value={options.category}
+        onChange={(value) =>
+          updateOption(
+            "category",
+            value as VehicleListOptions["category"],
+          )
+        }
+        options={[
+          { value: "", label: "Tüm kategoriler" },
+          { value: "ECONOMY", label: "Ekonomi" },
+          { value: "COMPACT", label: "Kompakt" },
+          { value: "SEDAN", label: "Sedan" },
+          { value: "SUV", label: "SUV" },
+          { value: "LUXURY", label: "Lüks" },
+          { value: "VAN", label: "Van" },
+          { value: "OTHER", label: "Diğer" },
+        ]}
+      />
+
       <VehicleFilterSelect
         label="Vites türü"
         value={options.transmission}
@@ -197,7 +253,8 @@ export default function VehicleList({
                   : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
               }`}
             >
-              {tab.label} · {tab.count}
+              {tab.label}
+              {!serverMode && ` · ${tab.count}`}
             </button>
           );
         })}
@@ -325,6 +382,58 @@ export default function VehicleList({
           )}
         </div>
       </div>
+{/*İlk sayfadaysak Önceki pasif olur. Son sayfadaysak Sonraki pasif olur. Veri yüklenirken butonlar pasif olur. Demo ekranlarında pagination görünmez */}
+{serverMode && pagination && pagination.totalPages > 1 && (
+  <nav
+    aria-label="Araç listesi sayfalama"
+    className="flex flex-wrap items-center justify-center gap-2 py-6"
+  >
+    <button
+      type="button"
+      disabled={isLoading || pagination.page <= 1}
+      onClick={() => onPageChange?.(pagination.page - 1)}
+      className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
+    >
+      Önceki
+    </button>
+
+    {Array.from(
+      { length: pagination.totalPages },
+      (_, index) => index + 1,
+    ).map((pageNumber) => (
+      <button
+        key={pageNumber}
+        type="button"
+        aria-label={`Sayfa ${pageNumber}`}
+        aria-current={
+          pagination.page === pageNumber ? "page" : undefined
+        }
+        disabled={isLoading}
+        onClick={() => onPageChange?.(pageNumber)}
+        className={`min-w-10 rounded-lg px-3 py-2 text-sm font-medium transition-colors disabled:cursor-not-allowed ${
+          pagination.page === pageNumber
+            ? "bg-[#285344] text-white"
+            : "text-slate-600 hover:bg-slate-100"
+        }`}
+      >
+        {pageNumber}
+      </button>
+    ))}
+
+    <button
+      type="button"
+      disabled={
+        isLoading ||
+        pagination.page >= pagination.totalPages
+      }
+      onClick={() => onPageChange?.(pagination.page + 1)}
+      className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
+    >
+      Sonraki
+    </button>
+  </nav>
+)}
+
     </section>
   );
 }

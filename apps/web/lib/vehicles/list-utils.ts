@@ -1,27 +1,33 @@
-
+//Araç listesindeki arama,filtreleme ve sıralama işlemlerini gerçekleştiren yardımcı fonksiyonalrı içerir
 import type {
   FleetStatus,
   FuelType,
   Transmission,
+  VehicleCategory,
   VehicleDisplayData,
 } from "@/types/vehicle";
 
+//Filtre seçeneklerinin tipi
 export type VehicleListOptions = {
   search: string;
+  category: VehicleCategory | "";
   fleetStatus: FleetStatus | "";
   transmission: Transmission | "";
   fuelType: FuelType | "";
   sortBy: "newest" | "make" | "priceAsc" | "priceDesc";
 };
 
+//Varsayılan seçenekler, başlangıç değerleri. Sayfa ilk açıldığında veya filtreler sıfırlandığında kullanılan değerlerdir
 export const defaultVehicleListOptions: VehicleListOptions = {
   search: "",
+  category: "",
   fleetStatus: "",
   transmission: "",
   fuelType: "",
   sortBy: "newest",
 };
 
+//Filtrelenmiş ve sıralanmış bir araç listesi döndürür
 export function filterAndSortVehicles(
   vehicles: VehicleDisplayData[],
   options: VehicleListOptions,
@@ -39,6 +45,8 @@ export function filterAndSortVehicles(
 
     return (
       (!search || searchableText.includes(search)) &&
+      (!options.category ||
+        vehicle.category === options.category) &&
       (!options.fleetStatus ||
         vehicle.fleetStatus === options.fleetStatus) &&
       (!options.transmission ||
@@ -47,7 +55,7 @@ export function filterAndSortVehicles(
         vehicle.fuelType === options.fuelType)
     );
   });
-
+  //Sıralama işlemi
   return [...filtered].sort((a, b) => {
     switch (options.sortBy) {
       case "make":

@@ -3,14 +3,6 @@ import TenantVehicleListClient from "./vehicle-list-client";
 export default function TenantVehiclesPage() {
   return (
     <div className="mx-auto w-full max-w-7xl space-y-6 px-4 py-6 sm:px-6 lg:px-8">
-      <div
-        role="note"
-        className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900"
-      >
-        <p className="font-semibold">Örnek araç verileri</p>
-       
-      </div>
-      {/*Mevcut VehicleList bileşenini tekrar kullandık*/}
       <TenantVehicleListClient />
     </div>
   );

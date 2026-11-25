@@ -1,13 +1,13 @@
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import { UnauthorizedException } from "@nestjs/common";
 
-import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { UnauthorizedException } from '@nestjs/common';
+import { VehiclesController } from "./vehicles.controller.js";
+import { VehiclesService } from "./vehicles.service.js";
+import type { TenantAuthenticatedRequest } from "../auth/guards/tenant-jwt-auth.guard.js";
+import { ListVehiclesQueryDto } from "./dto/list-vehicles-query.dto.js";
+import { CreateVehicleDto } from "./dto/create-vehicle.dto.js";
 
-import { VehiclesController } from './vehicles.controller.js';
-import { VehiclesService } from './vehicles.service.js';
-import type { TenantAuthenticatedRequest } from '../auth/guards/tenant-jwt-auth.guard.js';
-import { ListVehiclesQueryDto } from './dto/list-vehicles-query.dto.js';
-
-vi.mock('../auth/tenant-auth-context.js', () => ({
+vi.mock("../auth/tenant-auth-context.js", () => ({
   getTenantAuthContext: vi.fn((request) => {
     if (!request.tenantAuth) {
       throw new UnauthorizedException();
@@ -17,18 +17,20 @@ vi.mock('../auth/tenant-auth-context.js', () => ({
   }),
 }));
 
-describe('VehiclesController', () => {
+describe("VehiclesController", () => {
   const findAllForTenant = vi.fn();
   const findOneForTenant = vi.fn();
+  const createForTenant = vi.fn();
 
   const service = {
     findAllForTenant,
     findOneForTenant,
+    createForTenant,
   } as unknown as VehiclesService;
 
   const controller = new VehiclesController(service);
 
-  const createRequest = (tenantId = 'tenant_a') =>
+  const createRequest = (tenantId = "tenant_a") =>
     ({
       tenantAuth: {
         tenantId,
@@ -49,48 +51,52 @@ describe('VehiclesController', () => {
     });
 
     findOneForTenant.mockResolvedValue({
-      id: 'vehicle_1',
-      plate: '34 ABC 123',
+      id: "vehicle_1",
+      plate: "34 ABC 123",
+    });
+
+    createForTenant.mockResolvedValue({
+      id: "vehicle_1",
+      plate: "38 ABC 123",
+      dailyPrice: "1500.00",
+      fleetStatus: "ACTIVE",
     });
   });
 
-  it('listeleme için oturumdaki tenantId değerini kullanır', async () => {
-    const request = createRequest('tenant_a');
+  it("listeleme için oturumdaki tenantId değerini kullanır", async () => {
+    const request = createRequest("tenant_a");
     const query = new ListVehiclesQueryDto();
 
     await controller.findAll(request, query);
 
-    expect(findAllForTenant).toHaveBeenCalledWith('tenant_a', query);
+    expect(findAllForTenant).toHaveBeenCalledWith("tenant_a", query);
   });
 
-  it('arama ve filtreleme parametrelerini Service’e aktarır', async () => {
-    const request = createRequest('tenant_b');
+  it("arama ve filtreleme parametrelerini Service’e aktarır", async () => {
+    const request = createRequest("tenant_b");
     const query = Object.assign(new ListVehiclesQueryDto(), {
       page: 2,
       limit: 10,
-      search: 'Toyota',
-      category: 'SEDAN',
-      sortBy: 'dailyPrice',
-      sortOrder: 'asc',
+      search: "Toyota",
+      category: "SEDAN",
+      sortBy: "dailyPrice",
+      sortOrder: "asc",
     });
 
     await controller.findAll(request, query);
 
-    expect(findAllForTenant).toHaveBeenCalledWith('tenant_b', query);
+    expect(findAllForTenant).toHaveBeenCalledWith("tenant_b", query);
   });
 
-  it('araç detayında tenantId ve vehicleId gönderir', async () => {
-    const request = createRequest('tenant_a');
+  it("araç detayında tenantId ve vehicleId gönderir", async () => {
+    const request = createRequest("tenant_a");
 
-    await controller.findOne(request, 'vehicle_1');
+    await controller.findOne(request, "vehicle_1");
 
-    expect(findOneForTenant).toHaveBeenCalledWith(
-      'tenant_a',
-      'vehicle_1',
-    );
+    expect(findOneForTenant).toHaveBeenCalledWith("tenant_a", "vehicle_1");
   });
 
-  it('Service sonucunu değiştirmeden döndürür', async () => {
+  it("Service sonucunu değiştirmeden döndürür", async () => {
     const request = createRequest();
     const query = new ListVehiclesQueryDto();
 
@@ -107,7 +113,7 @@ describe('VehiclesController', () => {
     });
   });
 
-  it('Tenant oturum bilgisi yoksa isteği reddeder', async () => {
+  it("Tenant oturum bilgisi yoksa isteği reddeder", async () => {
     const request = {} as TenantAuthenticatedRequest;
 
     await expect(
@@ -115,5 +121,64 @@ describe('VehiclesController', () => {
     ).rejects.toThrow(UnauthorizedException);
 
     expect(findAllForTenant).not.toHaveBeenCalled();
+  });
+
+  describe("POST /tenant/vehicles", () => {
+    const validDto = (): CreateVehicleDto =>
+      Object.assign(new CreateVehicleDto(), {
+        plate: "38 ABC 123",
+        make: "Toyota",
+        model: "Corolla",
+        modelYear: 2024,
+        category: "SEDAN",
+        transmission: "AUTOMATIC",
+        fuelType: "HYBRID",
+        seatCount: 5,
+        odometerKm: 45000,
+        dailyPrice: "1500.00",
+        currency: "TRY",
+      });
+
+    it("doğrulanmış tenantId ve DTO ile Service çağırır", async () => {
+      const request = createRequest("tenant_a");
+      const dto = validDto();
+
+      await controller.create(request, dto);
+
+      expect(createForTenant).toHaveBeenCalledWith("tenant_a", dto);
+    });
+
+    it("farklı Tenant oturumunun kimliğini doğru aktarır", async () => {
+      const request = createRequest("tenant_b");
+      const dto = validDto();
+
+      await controller.create(request, dto);
+
+      expect(createForTenant).toHaveBeenCalledWith("tenant_b", dto);
+    });
+
+    it("Service tarafından oluşturulan araç yanıtını döndürür", async () => {
+      const result = await controller.create(
+        createRequest("tenant_a"),
+        validDto(),
+      );
+
+      expect(result).toEqual({
+        id: "vehicle_1",
+        plate: "38 ABC 123",
+        dailyPrice: "1500.00",
+        fleetStatus: "ACTIVE",
+      });
+    });
+
+    it("Tenant oturumu bulunmadığında kayıt oluşturmaz", async () => {
+      const request = {} as TenantAuthenticatedRequest;
+
+      await expect(controller.create(request, validDto())).rejects.toThrow(
+        UnauthorizedException,
+      );
+
+      expect(createForTenant).not.toHaveBeenCalled();
+    });
   });
 });

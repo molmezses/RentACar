@@ -42,7 +42,7 @@ RentACar, araç kiralama işletmelerine yönelik multi-tenant SaaS uygulamasıd�
 
 | G1 | Eda | Merge edildi (PR #74) | Tenant Admin araç listesi ve yeni araç formu entegrasyonu |
 
-D1–D4 kapsamında geliştirilen araç ekranları henüz gerçek Vehicle API ile entegre değildir. Bağımsız demo rotaları bulunmaktadır.
+D1–D4 kapsamında oluşturulan araç ekranlarından araç listeleme ekranı G3 kapsamında gerçek Vehicle API ile entegre edilmiştir. Araç oluşturma/düzenleme formunun gerçek API entegrasyonu ayrı frontend görevi kapsamındadır.
 
 ## 3. Aktif ve Planlanan Çalışmalar
 
@@ -56,10 +56,11 @@ D1–D4 kapsamında geliştirilen araç ekranları henüz gerçek Vehicle API il
 
 - G2: Tamamlandı, main branch'ine merge edildi.
 
-- F3: Geliştirme ve testler tamamlandı; PR hazırlığında, henüz merge edilmedi.
-- F4–F9: Backend ağırlıklı planlanan görevler.
+- F3: Geliştirme ve testler tamamlandı; PR #76 ile `main` branch’ine merge edildi.
+- F4: Araç oluşturma API geliştirmesi ve yerel testler tamamlandı; GitHub PR durumu ayrıca kontrol edilmelidir.
+- F5–F9: Backend ağırlıklı planlanan görevler.
 
-- G3: Geliştirme ve temel testler tamamlandı; PR hazırlığında.
+- G3: Araç listeleme frontend API entegrasyonu tamamlandı; PR #77 ile `main` branch’ine merge edildi.
 - G4–G9: Frontend ağırlıklı planlanan görevler.
 
 Tüm F/G görevleri tamamlandı anlamına gelmez. Güncel ilerleme için GitHub issue ve PR durumları kontrol edilmelidir.
@@ -99,7 +100,7 @@ GitHub merge durumu ve güncel main kodundan doğrulanmalıdır.
 
 - Frontend tipleri: `apps/web/types/vehicle.ts`
 
-- Vehicle listeleme ve detay API'si F3 kapsamında geliştirildi; henüz main branch'ine merge edilmedi.
+- Vehicle listeleme ve detay API’si F3 kapsamında geliştirilerek PR #76 ile `main` branch’ine merge edildi. Araç oluşturma API’si F4 kapsamında geliştirildi; merge durumu GitHub üzerinden doğrulanmalıdır.
 
 - Vehicle modeli her aracın bir Tenant'a ait olacağı şekilde tasarlanmıştır.
 
@@ -544,8 +545,8 @@ F4 — GitHub issue kapsamı doğrulanarak başlanacak.
 
 - **Sorumlu:** Eda
 - **Branch:** `feature/g3-vehicle-list-api-integration`
-- **PR:** Henüz oluşturulmadı
-- **Durum:** Geliştirme ve temel testler tamamlandı; PR hazırlığında, henüz merge edilmedi.
+- **PR:** #77 — Merge edildi
+- **Durum:** Geliştirme ve temel testler tamamlandı; `main` branch’ine merge edildi.
 
 ### Yapılan değişiklikler
 
@@ -606,6 +607,76 @@ Yeni bağımlılık veya zorunlu environment değişkeni eklenmedi.
 ### Sonraki bağımlı görev
 
 G4 ve sonraki frontend görevleri, ilgili GitHub issue kapsamı ve backend bağımlılıkları kontrol edilerek ele alınacaktır.
+
+## F4 — Tenant Vehicle Create API
+
+- **Sorumlu:** Mustafa
+- **Branch:** `feature/f4-tenant-vehicle-create`
+- **PR:** Güncel durum GitHub PR kaydından doğrulanmalıdır.
+- **Durum:** Geliştirme, manuel doğrulamalar, otomatik testler ve backend build tamamlandı.
+
+### Yapılan değişiklikler
+
+- Tenant Admin için `POST /tenant/vehicles` oluşturma endpoint'i eklendi.
+- `CreateVehicleDto` ile zorunlu ve opsiyonel alanlar; metin uzunlukları, enum değerleri, sayısal sınırlar ve decimal string fiyatlar doğrulandı.
+- Plaka kayıttan önce trim ve büyük harfe dönüştürülerek normalize edildi.
+- Opsiyonel boş para alanları `null` değerine dönüştürüldü; opsiyonel metinler kayıttan önce normalize edildi.
+- `tenantId` doğrulanmış Tenant Admin oturumundan alındı; istemcinin `tenantId`, `id`, `fleetStatus` veya timestamp alanlarını belirlemesi reddedildi.
+- Prisma `vehicle.create()` ile araç kalıcı olarak kaydedildi. `id`, varsayılan `ACTIVE` filo durumu ve zaman damgaları sunucu tarafından yönetildi.
+- Veritabanı benzersizlik ihlali (`P2002`) ham Prisma/SQL ayrıntıları paylaşılmadan `409 Conflict` yanıtına dönüştürüldü.
+- Oluşturulan araç F3'teki ortak response mapper üzerinden, `tenantId` olmadan ve para değerleri string olarak döndürüldü.
+- Swagger POST endpoint'i, istek DTO alanları ve yanıt/hata kodlarıyla belgelendi.
+
+### Değişen temel dosyalar
+
+- `apps/api/src/vehicles/dto/create-vehicle.dto.ts`
+- `apps/api/src/vehicles/vehicles.service.ts`
+- `apps/api/src/vehicles/vehicles.controller.ts`
+- `apps/api/src/vehicles/dto/create-vehicle.dto.spec.ts`
+- `apps/api/src/vehicles/vehicles.service.spec.ts`
+- `apps/api/src/vehicles/vehicles.controller.spec.ts`
+- `apps/api/test/tenant-isolation.e2e-spec.ts`
+- `docs/team/PROJECT_STATUS.md`
+
+### Yeni veya değişen API
+
+- `POST /tenant/vehicles`
+- Başarılı istek: `201 Created` ve araç detay yanıtı.
+- Geçersiz DTO / sistem alanı: `400 Bad Request`.
+- Eksik veya geçersiz Tenant Admin oturumu: `401 Unauthorized`.
+- Tenant kapsamındaki duplicate plaka / benzersiz kimlik: `409 Conflict`.
+- Araç fotoğrafı yükleme, düzenleme, rezervasyon ve silme bu görevin kapsamında değildir.
+
+### Migration
+
+Yeni migration yok. F2 kapsamında eklenen Prisma `Vehicle` modeli ve tenant bazlı benzersizlik kuralları kullanıldı.
+
+### Environment / dependency değişiklikleri
+
+Yeni environment değişkeni veya bağımlılık eklenmedi. Yerel E2E testleri için mevcut `rentacar_test` veritabanı kullanılmaktadır.
+
+### Test ve doğrulama sonuçları
+
+- `npx vitest run` — 23 dosyada **152 test başarılı** (unit ve mevcut integration testleri dahil).
+- `npx vitest run --config vitest.config.e2e.ts` — 4 dosyada **26 HTTP E2E testi başarılı**.
+- `test/tenant-isolation.e2e-spec.ts` — 11 test başarılı; bunların 5'i Vehicle Create senaryolarıdır.
+- `npm run build` — Başarılı.
+- Swagger ile araç oluşturma, hatalı veri, sistem alanlarının reddi ve duplicate plaka kontrolleri yapıldı.
+- Gerçek PostgreSQL üzerinde iki farklı Tenant için kayıt sahipliği, tenantlar arası görünmezlik, 404 ve aynı plaka için tenant bazlı 201/409 davranışları doğrulandı.
+- E2E testlerinde gerçek uygulamadaki `ValidationPipe` ayarları kullanıldı (`whitelist`, `forbidNonWhitelisted`, `transform`). Test verisi yalnızca `rentacar_test` kontrolünden sonra oluşturulup temizlendi.
+
+### Diğer geliştiricinin yapması gerekenler
+
+- Frontend araç oluşturma formunun gerçek API entegrasyonunda `POST /tenant/vehicles` kullanılmalıdır; ilgili frontend issue kapsamı ayrıca doğrulanmalıdır.
+- `tenantId`, `id`, `fleetStatus`, `createdAt` ve `updatedAt` istemciden gönderilmemelidir.
+- `dailyPrice` zorunlu decimal string; `depositAmount` ve `extraKmPrice` opsiyonel decimal string veya `null` olmalıdır.
+- Oluşturma sonucu dönen araç detay yanıtında `tenantId` yoktur; para alanları iki ondalıklı string olarak dönmektedir.
+- Duplicate plaka veya diğer benzersiz kimlik ihlallerinde `409 Conflict` kullanıcıya anlaşılır biçimde gösterilmelidir.
+- Araç fotoğrafları F4 kapsamında değildir.
+
+### Sonraki bağımlı görev
+
+F5 ve ilgili frontend entegrasyon görevinin kesin kapsamı GitHub issue açıklamalarından doğrulanmalıdır.
 
 ## 9. Geliştirme Asistanları İçin Çalışma Yöntemi
 

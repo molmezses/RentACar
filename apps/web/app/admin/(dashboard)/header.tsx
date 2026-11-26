@@ -1,8 +1,6 @@
 
 import Link from "next/link";
 
-import LogoutButton from "../logout-button";
-
 export default function AdminHeader() {
   return (
     <header className="border-b border-slate-200 bg-white px-5 py-5 lg:px-10">
@@ -25,8 +23,6 @@ export default function AdminHeader() {
             <span className="h-2 w-2 rounded-full bg-blue-500" />
             Platform Admin
           </span>
-
-          <LogoutButton />
         </div>
       </div>
     </header>

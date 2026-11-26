@@ -8,6 +8,8 @@ type DeleteApplicationButtonProps = {
   companyName: string;
   status: "PENDING" | "APPROVED" | "REJECTED";
   tenantId: string | null;
+  variant?: "button" | "menu";
+  onDialogClose?: () => void;
 };
 
 export default function DeleteApplicationButton({
@@ -15,6 +17,8 @@ export default function DeleteApplicationButton({
   companyName,
   status,
   tenantId,
+  variant= "button",
+  onDialogClose,
 }: DeleteApplicationButtonProps) {
   const [isOpen, setIsOpen] = useState(false);
   const router = useRouter();
@@ -86,8 +90,9 @@ async function handleDelete() {
       return;
     }
 
-    setIsOpen(false);
-    router.refresh();
+   setIsOpen(false);
+   onDialogClose?.();
+   router.refresh();
   } catch {
     setError(
       "Bağlantı hatası oluştu. İşlem gerçekleşmiş olabilir. Listeyi yenileyerek kontrol edin.",
@@ -107,9 +112,10 @@ async function handleDelete() {
       <button
         type="button"
         onClick={() => setIsOpen(true)}
-        className="rounded-lg border border-red-200 px-3 py-2 text-xs font-medium text-red-700 hover:bg-red-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-600"
-      >
-        Sil
+        className={ variant === "menu"
+          ? "flex w-full items-center rounded-md px-3 py-2 text-left text-sm font-medium text-red-700 hover:bg-red-50 focus-visible:outline-2 focus-visible:outline-red-600"
+          : "rounded-lg border border-red-200 px-3 py-2 text-xs font-medium text-red-900 hover:bg-red-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-600"}>
+              Sil
       </button>
 
       {isOpen && (
@@ -122,8 +128,11 @@ async function handleDelete() {
             if (inFlight.current) {
               event.preventDefault();
             }
+          }}onClose={() => {
+            setIsOpen(false);
+            onDialogClose?.();
           }}
-          onClose={() => setIsOpen(false)}
+          
           className="m-auto w-[calc(100%-2rem)] max-w-md rounded-xl border-0 bg-white p-6 text-left shadow-xl backdrop:bg-black/50"
         >
           <h2
@@ -151,7 +160,10 @@ async function handleDelete() {
             <button
               type="button"
               autoFocus
-              onClick={() => setIsOpen(false)}
+              onClick={() => {
+              setIsOpen(false);
+              onDialogClose?.();
+            }}
               disabled={loading}
               className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
             >

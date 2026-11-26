@@ -57,11 +57,12 @@ D1–D4 kapsamında oluşturulan araç ekranlarından araç listeleme ekranı G3
 - G2: Tamamlandı, main branch'ine merge edildi.
 
 - F3: Geliştirme ve testler tamamlandı; PR #76 ile `main` branch’ine merge edildi.
-- F4: Araç oluşturma API geliştirmesi ve yerel testler tamamlandı; GitHub PR durumu ayrıca kontrol edilmelidir.
+- F4: Tamamlandı, PR #78 ile `main` branch'ine merge edildi.
 - F5–F9: Backend ağırlıklı planlanan görevler.
 
 - G3: Araç listeleme frontend API entegrasyonu tamamlandı; PR #77 ile `main` branch’ine merge edildi.
-- G4–G9: Frontend ağırlıklı planlanan görevler.
+- G4: Tenant Vehicle Fleet Status API geliştirmesi ve yerel doğrulamalar tamamlandı; `feature/g4-vehicle-fleet-status-api` branch'inde, main'e henüz merge edilmedi.
+- G5–G9: GitHub issue kapsamları doğrulanarak yürütülecek planlanan görevler.
 
 Tüm F/G görevleri tamamlandı anlamına gelmez. Güncel ilerleme için GitHub issue ve PR durumları kontrol edilmelidir.
 
@@ -100,7 +101,8 @@ GitHub merge durumu ve güncel main kodundan doğrulanmalıdır.
 
 - Frontend tipleri: `apps/web/types/vehicle.ts`
 
-- Vehicle listeleme ve detay API’si F3 kapsamında geliştirilerek PR #76 ile `main` branch’ine merge edildi. Araç oluşturma API’si F4 kapsamında geliştirildi; merge durumu GitHub üzerinden doğrulanmalıdır.
+- Vehicle listeleme ve detay API’si F3 kapsamında geliştirilerek PR #76 ile `main` branch’ine merge edildi.
+- Vehicle listeleme ve detay API'si F3 kapsamında PR #76 ile, araç oluşturma API'si F4 kapsamında PR #78 ile `main` branch'ine merge edildi. Filo durumu değiştirme API'si G4 kapsamında geliştirildi; henüz `main` branch'ine merge edilmedi.
 
 - Vehicle modeli her aracın bir Tenant'a ait olacağı şekilde tasarlanmıştır.
 
@@ -612,8 +614,8 @@ G4 ve sonraki frontend görevleri, ilgili GitHub issue kapsamı ve backend bağ�
 
 - **Sorumlu:** Mustafa
 - **Branch:** `feature/f4-tenant-vehicle-create`
-- **PR:** Güncel durum GitHub PR kaydından doğrulanmalıdır.
-- **Durum:** Geliştirme, manuel doğrulamalar, otomatik testler ve backend build tamamlandı.
+- **PR:** #78 — Merge edildi
+- **Durum:** Tamamlandı, `main` branch'ine merge edildi.
 
 ### Yapılan değişiklikler
 
@@ -677,6 +679,103 @@ Yeni environment değişkeni veya bağımlılık eklenmedi. Yerel E2E testleri i
 ### Sonraki bağımlı görev
 
 F5 ve ilgili frontend entegrasyon görevinin kesin kapsamı GitHub issue açıklamalarından doğrulanmalıdır.
+
+## G4 — Tenant Vehicle Fleet Status API
+
+- **Sorumlu:** Eda
+- **Branch:** `feature/g4-vehicle-fleet-status-api`
+- **Commit:** `0a13531` — G4 geliştirmesi
+- **Entegrasyon commit'i:** `2181904` — F4 değişikliklerinin G4 branch'ine merge edilmesi
+- **Durum:** Geliştirme, migration, otomatik testler ve backend doğrulamaları tamamlandı. Henüz `main` branch'ine merge edilmedi.
+
+### Yapılan değişiklikler
+
+- Tenant Admin için araçların filo durumunu değiştiren `PATCH /tenant/vehicles/:id/status` endpoint'i geliştirildi.
+- Yalnızca `ACTIVE` ve `INACTIVE` değerlerini kabul eden `UpdateVehicleStatusDto` oluşturuldu.
+- Tenant kimliği istemci tarafından değil, doğrulanmış JWT oturumundan alındı.
+- Araç sorguları Tenant kapsamıyla sınırlandırıldı. Başka Tenant'a ait veya bulunamayan araçlar için `404 Not Found` davranışı uygulandı.
+- Prisma `Vehicle` modeline opsiyonel `deactivatedAt` alanı eklendi.
+- Araç `INACTIVE` yapıldığında `deactivatedAt` alanına durum değişikliği zamanı kaydedildi.
+- Araç yeniden `ACTIVE` yapıldığında `deactivatedAt` alanı `null` olarak güncellendi.
+- Aynı durumun tekrar gönderilmesi hâlinde gereksiz veritabanı güncellemesi yapılmayacak şekilde idempotent davranış uygulandı.
+- Eşzamanlı durum değişikliklerinde koşullu `updateMany` kullanıldı.
+- API yanıtında `deactivatedAt` değeri ISO tarih string'i veya `null` olarak döndürülür.
+- Swagger dokümantasyonu ve DTO doğrulamaları eklendi.
+- F4 araç oluşturma API'siyle oluşan merge conflict'leri çözüldü. Hem `POST /tenant/vehicles` hem de G4 status endpoint'i korundu.
+
+### Değişen temel dosyalar
+
+- `apps/api/prisma/schema.prisma`
+- `apps/api/prisma/migrations/20261125160739_add_vehicle_deactivated_at/migration.sql`
+- `apps/api/src/vehicles/vehicles.controller.ts`
+- `apps/api/src/vehicles/vehicles.service.ts`
+- `apps/api/src/vehicles/vehicle-response.mapper.ts`
+- `apps/api/src/vehicles/dto/update-vehicle-status.dto.ts`
+- `apps/api/src/vehicles/vehicles.controller.spec.ts`
+- `apps/api/src/vehicles/vehicles.service.spec.ts`
+- `apps/api/test/vehicle-status.e2e-spec.ts`
+
+### Yeni veya değişen API
+
+**Endpoint:** `PATCH /tenant/vehicles/:id/status`
+
+Örnek istek:
+
+```json
+{
+  "fleetStatus": "INACTIVE"
+}
+```
+
+- İstek doğrulanmış Tenant Admin JWT oturumu gerektirir.
+- `tenantId` istek gövdesinden alınmaz.
+- `ACTIVE` ve `INACTIVE` dışındaki filo durumları reddedilir.
+- Başarılı yanıtta güncel araç bilgileri döndürülür.
+- Başka Tenant'a ait veya mevcut olmayan araçlar için `404 Not Found` kullanılır.
+- Tekrarlanan aynı durum isteği mevcut durumu ve `deactivatedAt` değerini korur.
+
+### Migration
+
+**Migration:** `20261125160739_add_vehicle_deactivated_at`
+
+- `Vehicle` modeline nullable `deactivatedAt DateTime?` alanı eklendi.
+- Migration yerel `rentacar` geliştirme veritabanına uygulandı.
+- Test veritabanı `rentacar_test` aynı şema ile hazırlandı.
+- Yeni environment değişkeni veya uygulama bağımlılığı eklenmedi.
+
+### Test ve doğrulama sonuçları
+
+F4 değişikliklerinin G4 branch'ine birleştirilmesinden sonra:
+
+- `npx tsc --noEmit` — Başarılı.
+- `npm test -- --run` — **24 dosyada 169 test başarılı.**
+- `npx vitest run --config vitest.config.e2e.ts` — **5 dosyada 36 HTTP E2E testi başarılı.**
+- `test/vehicle-status.e2e-spec.ts` — **10 test başarılı.**
+- `npm run lint` — 0 hata, 0 uyarı.
+- `npm run build` — Başarılı.
+- `git diff --cached --check` — Hata yok.
+- F4 ile G4 arasındaki Git merge işlemi tamamlandı; çalışma ağacı temiz.
+
+### Teknik değerlendirme
+
+- Durum değişikliği, rezervasyon tarih aralığına göre araç müsaitliği anlamına gelmez.
+- `deactivatedAt` alanı filo durumuna bağlıdır; bağımsız şekilde istemci tarafından yönetilmez.
+- Koşullu güncelleme eşzamanlı isteklerde gereksiz yazma işlemlerini azaltır.
+- Güncelleme sonrası ayrı bir okuma sorgusu kullanıldığından, çok yakın zamanlı eşzamanlı değişikliklerde yanıtın en son veritabanı durumunu yansıtması mümkündür. Bu davranış kod incelemesinde değerlendirilebilir.
+
+### Diğer geliştiricinin yapması gerekenler
+
+- Frontend filo durumu kontrollerinde `PATCH /tenant/vehicles/:id/status` kullanılmalıdır.
+- İstek gövdesinde yalnızca `fleetStatus` gönderilmelidir.
+- `tenantId`, `deactivatedAt` ve diğer sistem alanları istemciden gönderilmemelidir.
+- Durum değişikliği sonrasında araç listesi veya araç detayı güncel veriye göre yenilenmelidir.
+- F4 araç oluşturma API'si ile G4 durum yönetimi API'si birbirinden bağımsız endpoint'lerdir.
+- Yeni veya mevcut ortamlarda G4 migration'ı uygulanmalıdır.
+
+### Sonraki bağımlı görev
+
+G5 ve devamındaki geliştirmelerin kapsamı, güncel GitHub issue açıklamaları ve tamamlanan backend API sözleşmeleri doğrulanarak belirlenmelidir.
+
 
 ## 9. Geliştirme Asistanları İçin Çalışma Yöntemi
 

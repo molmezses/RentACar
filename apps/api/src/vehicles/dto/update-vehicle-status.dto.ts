@@ -6,9 +6,10 @@ import { FleetStatus } from '../../../generated/prisma/client.js';
 
 export class UpdateVehicleStatusDto {
   @ApiProperty({
-    description: 'Aracın yeni filo durumu',
     enum: FleetStatus,
     example: FleetStatus.INACTIVE,
+    description: 'Aracın filo durumu: ACTIVE veya INACTIVE',
+    enumName: 'FleetStatus',
   })
   @IsEnum(FleetStatus)  //Gelen değerin FleetStatus enumundaki değerlerden biri olup olmadığını kontrol eder
   fleetStatus!: FleetStatus;

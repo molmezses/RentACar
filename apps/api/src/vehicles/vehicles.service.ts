@@ -1,13 +1,20 @@
-import { Prisma } from "../../generated/prisma/client.js";
+
 import {
-  Injectable,
+  FleetStatus,
+  Prisma,
+} from '../../generated/prisma/client.js';
+
+import {
   ConflictException,
+  Injectable,
   NotFoundException,
-} from "@nestjs/common";
-import { PrismaService } from "../prisma/prisma.service.js";
-import type { ListVehiclesQueryDto } from "./dto/list-vehicles-query.dto.js";
-import { toTenantVehicleResponse } from "./vehicle-response.mapper.js";
-import { CreateVehicleDto } from "./dto/create-vehicle.dto.js";
+} from '@nestjs/common';
+
+import { PrismaService } from '../prisma/prisma.service.js';
+import type { ListVehiclesQueryDto } from './dto/list-vehicles-query.dto.js';
+import { toTenantVehicleResponse } from './vehicle-response.mapper.js';
+import { CreateVehicleDto } from './dto/create-vehicle.dto.js';
+
 
 @Injectable()
 export class VehiclesService {
@@ -178,5 +185,45 @@ export class VehiclesService {
       // Diğer hataları NestJS'in genel hata yönetimine bırak.
       throw error;
     }
+  }
+
+  //id doğru mu ? araç bu tenanta ait mi? araç beklenen önceki durumda mı?
+  async updateStatusForTenant(
+    tenantId: string,
+    vehicleId: string,
+    fleetStatus: FleetStatus,
+  ) {
+    const previousStatus =
+      fleetStatus === FleetStatus.ACTIVE
+        ? FleetStatus.INACTIVE
+        : FleetStatus.ACTIVE;
+
+    await this.prisma.vehicle.updateMany({
+      where: {
+        id: vehicleId,
+        tenantId,
+        fleetStatus: previousStatus,
+      },
+      data: {
+        fleetStatus,
+        deactivatedAt:
+          fleetStatus === FleetStatus.INACTIVE
+            ? new Date()
+            : null,
+      },
+    });
+
+    const vehicle = await this.prisma.vehicle.findFirst({
+      where: {
+        id: vehicleId,
+        tenantId,
+      },
+    });
+
+    if (!vehicle) {
+      throw new NotFoundException('Vehicle not found');
+    }
+
+    return toTenantVehicleResponse(vehicle);
   }
 }

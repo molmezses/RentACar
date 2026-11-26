@@ -21,11 +21,13 @@ describe("VehiclesController", () => {
   const findAllForTenant = vi.fn();
   const findOneForTenant = vi.fn();
   const createForTenant = vi.fn();
+  const updateStatusForTenant = vi.fn();
 
   const service = {
     findAllForTenant,
     findOneForTenant,
     createForTenant,
+    updateStatusForTenant,
   } as unknown as VehiclesService;
 
   const controller = new VehiclesController(service);
@@ -37,31 +39,41 @@ describe("VehiclesController", () => {
       },
     }) as unknown as TenantAuthenticatedRequest;
 
-  beforeEach(() => {
-    vi.resetAllMocks();
+beforeEach(() => {
+  vi.resetAllMocks();
 
-    findAllForTenant.mockResolvedValue({
-      items: [],
-      pagination: {
-        page: 1,
-        limit: 20,
-        total: 0,
-        totalPages: 0,
-      },
-    });
-
-    findOneForTenant.mockResolvedValue({
-      id: "vehicle_1",
-      plate: "34 ABC 123",
-    });
-
-    createForTenant.mockResolvedValue({
-      id: "vehicle_1",
-      plate: "38 ABC 123",
-      dailyPrice: "1500.00",
-      fleetStatus: "ACTIVE",
-    });
+  // F3 — Araç listeleme
+  findAllForTenant.mockResolvedValue({
+    items: [],
+    pagination: {
+      page: 1,
+      limit: 20,
+      total: 0,
+      totalPages: 0,
+    },
   });
+
+  // F3 — Araç detayı
+  findOneForTenant.mockResolvedValue({
+    id: 'vehicle_1',
+    plate: '34 ABC 123',
+  });
+
+  // F4 — Araç oluşturma
+  createForTenant.mockResolvedValue({
+    id: 'vehicle_1',
+    plate: '38 ABC 123',
+    dailyPrice: '1500.00',
+    fleetStatus: 'ACTIVE',
+  });
+
+  // G4 — Aktif/pasif durum güncelleme
+  updateStatusForTenant.mockResolvedValue({
+    id: 'vehicle_1',
+    fleetStatus: 'INACTIVE',
+    deactivatedAt: '2026-11-25T17:00:00.000Z',
+  });
+});
 
   it("listeleme için oturumdaki tenantId değerini kullanır", async () => {
     const request = createRequest("tenant_a");
@@ -181,4 +193,62 @@ describe("VehiclesController", () => {
       expect(createForTenant).not.toHaveBeenCalled();
     });
   });
+
+
+it('durum güncellemede tenantId değerini oturumdan alır', async () => {
+  const request = createRequest('tenant_a');
+
+  const body = {
+    fleetStatus: 'INACTIVE' as const,
+  };
+
+  await controller.updateStatus(
+    request,
+    'vehicle_1',
+    body,
+  );
+
+  expect(updateStatusForTenant).toHaveBeenCalledWith(
+    'tenant_a',
+    'vehicle_1',
+    'INACTIVE',
+  );
+});
+
+
+it('durum güncelleme sonucunu değiştirmeden döndürür', async () => {
+  const request = createRequest('tenant_a');
+
+  const body = {
+    fleetStatus: 'INACTIVE' as const,
+  };
+
+  const result = await controller.updateStatus(
+    request,
+    'vehicle_1',
+    body,
+  );
+
+  expect(result).toEqual({
+    id: 'vehicle_1',
+    fleetStatus: 'INACTIVE',
+    deactivatedAt: '2026-11-25T17:00:00.000Z',
+  });
+});
+
+
+it('durum güncellemede Tenant oturumu yoksa isteği reddeder', async () => {
+  const request = {} as TenantAuthenticatedRequest;
+
+  await expect(
+    controller.updateStatus(
+      request,
+      'vehicle_1',
+      { fleetStatus: 'INACTIVE' },
+    ),
+  ).rejects.toThrow(UnauthorizedException);
+
+  expect(updateStatusForTenant).not.toHaveBeenCalled();
+});
+
 });

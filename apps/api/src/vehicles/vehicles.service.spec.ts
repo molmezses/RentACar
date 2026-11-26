@@ -12,6 +12,7 @@ describe("VehiclesService", () => {
   const findMany = vi.fn();
   const count = vi.fn();
   const findFirst = vi.fn();
+  const updateMany=vi.fn();
   const create = vi.fn();
 
   const prisma = {
@@ -20,6 +21,7 @@ describe("VehiclesService", () => {
       count,
       findFirst,
       create,
+      updateMany,
     },
   } as unknown as PrismaService;
 
@@ -48,6 +50,7 @@ describe("VehiclesService", () => {
     includedMileageKm: null,
     extraKmPrice: null,
     fleetStatus: "ACTIVE" as const,
+    deactivatedAt: null,
     color: null,
     vin: null,
     internalCode: null,
@@ -62,10 +65,12 @@ describe("VehiclesService", () => {
 
   beforeEach(() => {
     vi.resetAllMocks();
+
     findMany.mockResolvedValue([]);
     count.mockResolvedValue(0);
     findFirst.mockResolvedValue(null);
     create.mockResolvedValue(createVehicle());
+    updateMany.mockResolvedValue({ count: 0 });
   });
 
   describe("findAllForTenant", () => {
@@ -431,4 +436,208 @@ describe("VehiclesService", () => {
       }
     });
   });
+
+describe('updateStatusForTenant', () => {
+  it('ACTIVE aracı INACTIVE yapar ve pasifleştirme tarihi oluşturur', async () => {
+    // Veritabanında bir araç güncellendiğini taklit ediyoruz.
+    updateMany.mockResolvedValue({ count: 1 });
+
+    // Güncellemeden sonra araç artık pasif durumdadır.
+    findFirst.mockResolvedValue({
+      ...createVehicle(),
+      fleetStatus: 'INACTIVE',
+      deactivatedAt: new Date('2026-11-25T16:30:00.000Z'),
+    });
+
+    // Geliştirdiğimiz Service metodunu çalıştırıyoruz.
+    const result = await service.updateStatusForTenant(
+      'tenant_a',
+      'vehicle_1',
+      'INACTIVE',
+    );
+
+    // Doğru tenant ve mevcut durum koşuluyla güncelleme yapılmalı.
+    expect(updateMany).toHaveBeenCalledWith({
+      where: {
+        id: 'vehicle_1',
+        tenantId: 'tenant_a',
+        fleetStatus: 'ACTIVE',
+      },
+      data: {
+        fleetStatus: 'INACTIVE',
+        deactivatedAt: expect.any(Date),
+      },
+    });
+
+    // API yanıtında güncel durum görünmeli.
+    expect(result.fleetStatus).toBe('INACTIVE');
+
+    // Pasifleştirme tarihi ISO string olarak dönmeli.
+    expect(result.deactivatedAt).toBe('2026-11-25T16:30:00.000Z');
+
+    // Tenant kimliği API yanıtında bulunmamalı.
+    expect(result).not.toHaveProperty('tenantId');
+  });
+
+  it('INACTIVE aracı ACTIVE yapar ve pasifleştirme tarihini temizler', async () => {
+    updateMany.mockResolvedValue({ count: 1 });
+
+    findFirst.mockResolvedValue({
+      ...createVehicle(),
+      fleetStatus: 'ACTIVE',
+      deactivatedAt: null,
+    });
+
+    const result = await service.updateStatusForTenant(
+      'tenant_a',
+      'vehicle_1',
+      'ACTIVE',
+    );
+
+    expect(updateMany).toHaveBeenCalledWith({
+      where: {
+        id: 'vehicle_1',
+        tenantId: 'tenant_a',
+        fleetStatus: 'INACTIVE',
+      },
+      data: {
+        fleetStatus: 'ACTIVE',
+        deactivatedAt: null,
+      },
+    });
+
+    expect(result.fleetStatus).toBe('ACTIVE');
+    expect(result.deactivatedAt).toBeNull();
+  });
+
+  it('araç zaten INACTIVE ise pasifleştirme tarihini korur', async () => {
+    const oldDate = new Date('2026-11-24T14:00:00.000Z');
+
+    // Güncelleme koşuluna uyan kayıt bulunmadı.
+    updateMany.mockResolvedValue({ count: 0 });
+
+    // Araç zaten pasif; eski tarih korunuyor.
+    findFirst.mockResolvedValue({
+      ...createVehicle(),
+      fleetStatus: 'INACTIVE',
+      deactivatedAt: oldDate,
+    });
+
+    const result = await service.updateStatusForTenant(
+      'tenant_a',
+      'vehicle_1',
+      'INACTIVE',
+    );
+
+    expect(updateMany).toHaveBeenCalledWith({
+      where: {
+        id: 'vehicle_1',
+        tenantId: 'tenant_a',
+        fleetStatus: 'ACTIVE',
+      },
+      data: {
+        fleetStatus: 'INACTIVE',
+        deactivatedAt: expect.any(Date),
+      },
+    });
+
+    expect(result.fleetStatus).toBe('INACTIVE');
+    expect(result.deactivatedAt).toBe(
+      '2026-11-24T14:00:00.000Z',
+    );
+  });
+
+  it('araç zaten ACTIVE ise durumunu değiştirmez', async () => {
+    updateMany.mockResolvedValue({ count: 0 });
+
+    findFirst.mockResolvedValue({
+      ...createVehicle(),
+      fleetStatus: 'ACTIVE',
+      deactivatedAt: null,
+    });
+
+    const result = await service.updateStatusForTenant(
+      'tenant_a',
+      'vehicle_1',
+      'ACTIVE',
+    );
+
+    expect(updateMany).toHaveBeenCalledWith({
+      where: {
+        id: 'vehicle_1',
+        tenantId: 'tenant_a',
+        fleetStatus: 'INACTIVE',
+      },
+      data: {
+        fleetStatus: 'ACTIVE',
+        deactivatedAt: null,
+      },
+    });
+
+    expect(result.fleetStatus).toBe('ACTIVE');
+    expect(result.deactivatedAt).toBeNull();
+  });
+
+  it('araç bulunamadığında 404 hatası fırlatır', async () => {
+    updateMany.mockResolvedValue({ count: 0 });
+    findFirst.mockResolvedValue(null);
+
+    await expect(
+      service.updateStatusForTenant(
+        'tenant_a',
+        'unknown_vehicle',
+        'INACTIVE',
+      ),
+    ).rejects.toThrow(NotFoundException);
+
+    expect(updateMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: {
+          id: 'unknown_vehicle',
+          tenantId: 'tenant_a',
+          fleetStatus: 'ACTIVE',
+        },
+      }),
+    );
+
+    expect(findFirst).toHaveBeenCalledWith({
+      where: {
+        id: 'unknown_vehicle',
+        tenantId: 'tenant_a',
+      },
+    });
+  });
+
+  it('başka Tenant aracının durumunu değiştirmez ve 404 döndürür', async () => {
+    // tenant_a için eşleşen kayıt bulunmadığını simüle ediyoruz.
+    updateMany.mockResolvedValue({ count: 0 });
+    findFirst.mockResolvedValue(null);
+
+    await expect(
+      service.updateStatusForTenant(
+        'tenant_a',
+        'vehicle_of_tenant_b',
+        'INACTIVE',
+      ),
+    ).rejects.toThrow(NotFoundException);
+
+    expect(updateMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: {
+          id: 'vehicle_of_tenant_b',
+          tenantId: 'tenant_a',
+          fleetStatus: 'ACTIVE',
+        },
+      }),
+    );
+
+    expect(findFirst).toHaveBeenCalledWith({
+      where: {
+        id: 'vehicle_of_tenant_b',
+        tenantId: 'tenant_a',
+      },
+    });
+  });
+});
+
 });

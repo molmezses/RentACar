@@ -23,6 +23,7 @@ describe('toTenantVehicleResponse', () => {
     includedMileageKm: 200,
     extraKmPrice: new Prisma.Decimal('12.50'),
     fleetStatus: 'ACTIVE',
+    deactivatedAt: null,
     color: null,
     vin: null,
     internalCode: null,
@@ -79,4 +80,31 @@ describe('toTenantVehicleResponse', () => {
     expect(result.fleetStatus).toBe('ACTIVE');
     expect(result.createdAt).toBeInstanceOf(Date);
   });
+
+
+it('deactivatedAt doluysa ISO tarih string olarak döndürür', () => {
+  const date = new Date('2026-11-25T16:30:00.000Z');
+
+  const vehicle = {
+    ...createVehicle(),
+    fleetStatus: 'INACTIVE' as const,
+    deactivatedAt: date,
+  };
+
+  const result = toTenantVehicleResponse(vehicle);
+
+  expect(result.deactivatedAt).toBe('2026-11-25T16:30:00.000Z');
+});
+
+it('deactivatedAt null ise API yanıtında null döndürür', () => {
+  const vehicle = {
+    ...createVehicle(),
+    fleetStatus: 'ACTIVE' as const,
+    deactivatedAt: null,
+  };
+
+  const result = toTenantVehicleResponse(vehicle);
+
+  expect(result.deactivatedAt).toBeNull();
+});
 });

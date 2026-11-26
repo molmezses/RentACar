@@ -1,8 +1,7 @@
-import Link from "next/link";
 
 import type { TenantApplication } from "../../../../types/tenant-application";
 import ApplicationStatusBadge from "./application-status-badge";
-import DeleteApplicationButton from "./delete-application-button";
+import ApplicationActionsMenu from "./application-actions-menu";
 
 type ApplicationTableProps = {
   applications: TenantApplication[];
@@ -80,15 +79,8 @@ export default function ApplicationTable({
                 </td>
 
                 <td className="px-5 py-4 text-right">
-                  <div className="flex items-center justify-end gap-2">
-                    <Link
-                      href={`/admin/applications/${encodeURIComponent(application.id)}`}
-                      className="inline-flex rounded-lg border border-slate-200 px-3 py-2 text-xs font-medium text-slate-700 hover:border-slate-300 hover:bg-slate-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-900"
-                    >
-                      Detayları Gör
-                    </Link>
-
-                    <DeleteApplicationButton
+                  <div className="flex items-center justify-end">
+                    <ApplicationActionsMenu
                       applicationId={application.id}
                       companyName={application.companyName}
                       status={application.status}
@@ -126,21 +118,14 @@ export default function ApplicationTable({
             </p>
 
             <p className="text-sm text-slate-600">{application.contactPhone}</p>
-
-            <div className="flex flex-wrap items-center gap-2 sm:justify-between">
+            <div className="flex items-center justify-between gap-3">
               <span className="text-xs text-slate-500">
                 {new Date(application.createdAt).toLocaleDateString("tr-TR", {
                   timeZone: "Europe/Istanbul",
                 })}
               </span>
 
-              <Link
-                href={`/admin/applications/${encodeURIComponent(application.id)}`}
-                className="rounded-lg bg-slate-900 px-3 py-2 text-xs font-medium text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-900"
-              >
-                Detayları Gör
-              </Link>
-              <DeleteApplicationButton
+              <ApplicationActionsMenu
                 applicationId={application.id}
                 companyName={application.companyName}
                 status={application.status}

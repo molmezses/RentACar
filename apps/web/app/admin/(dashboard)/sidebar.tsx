@@ -3,6 +3,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import LogoutButton from "../logout-button";
 
 type AdminIconName = "dashboard" | "applications";
 
@@ -57,8 +58,8 @@ export default function AdminSidebar() {
   return (
     <aside
       aria-label="Yönetim menüsü"
-      className="hidden min-h-screen w-64 shrink-0 flex-col bg-[#19243a] text-white md:flex"
-    >
+      className="sticky top-0 hidden h-screen w-64 shrink-0 flex-col self-start overflow-y-auto bg-[#19243a] text-white md:flex"
+>
       {/* Marka alanı */}
       <div className="border-b border-white/10 px-6 py-6">
         <div className="flex items-center gap-3">
@@ -111,10 +112,8 @@ export default function AdminSidebar() {
         })}
       </nav>
 
-      <div className="border-t border-white/10 px-6 py-5">
-        <p className="text-xs text-[#a9b9d3]">
-          Sistem Yönetimi
-        </p>
+      <div className="mt-auto border-t border-white/10 px-4 py-5">
+        <LogoutButton variant="sidebar" />
       </div>
     </aside>
   );

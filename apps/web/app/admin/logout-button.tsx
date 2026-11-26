@@ -2,7 +2,13 @@
 
 import { useState } from "react";
 
-export default function LogoutButton() {
+type LogoutButtonProps = {
+  variant?: "default" | "sidebar";
+};
+
+export default function LogoutButton({
+  variant = "default",
+}: LogoutButtonProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -33,21 +39,38 @@ export default function LogoutButton() {
     }
   }
 
-  return (
-      <div className="flex flex-col items-start gap-2">
-      <button
-        type="button"
-        onClick={handleLogout}
-        disabled={isLoading}
-        className="rounded-lg bg-red-600 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-red-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-600 disabled:cursor-not-allowed disabled:opacity-60">
-        {isLoading ? "Çıkış yapılıyor..." : "Çıkış Yap"}
-      </button>
-
-      {error && (
-        <p role="alert" className="max-w-60 text-sm text-red-700">
-          {error}
-        </p>
+return (
+  <div className={variant === "sidebar" ? "w-full" : "flex flex-col items-start gap-2"}>
+    <button
+      type="button"
+      onClick={handleLogout}
+      disabled={isLoading}
+      className={
+        variant === "sidebar"
+          ? "flex w-full items-center justify-center gap-2 rounded-xl border border-white/20 bg-white/5 px-4 py-3 text-sm font-medium text-white transition-colors hover:bg-white/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white disabled:cursor-not-allowed disabled:opacity-60"
+          : "rounded-lg bg-red-600 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-red-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-600 disabled:cursor-not-allowed disabled:opacity-60"
+      }
+    >
+      {variant === "sidebar" && (
+        <span aria-hidden="true">↪</span>
       )}
-    </div>
-  );
+      
+      <span>{isLoading ? "Çıkış yapılıyor..." : "Çıkış Yap"}</span>
+    </button>
+
+    {error && (
+      <p
+        role="alert"
+        className={
+          variant === "sidebar"
+            ? "flex w-full items-center justify-center gap-2 rounded-xl border border-white/20 bg-white/5 px-4 py-3 text-sm font-medium text-white transition-colors hover:bg-white/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white disabled:cursor-not-allowed disabled:opacity-60"
+            : "max-w-60 text-sm text-red-700"
+        }
+      >
+        {error}
+      </p>
+    )}
+  </div>
+);
+
 }

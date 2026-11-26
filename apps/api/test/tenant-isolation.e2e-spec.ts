@@ -384,4 +384,209 @@ describe("Tenant Isolation E2E", () => {
         .expect(409);
     });
   });
+
+  describe("Vehicle Update E2E", () => {
+    // Her test için ayrı bir araç oluşturuyoruz.
+    // Böylece testler birbirinin verisini değiştirmiyor.
+    const createTestVehicle = async (tenantId: string) => {
+      await assertTestDatabase();
+
+      return prisma.vehicle.create({
+        data: {
+          tenantId,
+          plate: `E2E ${randomUUID().slice(0, 8).toUpperCase()}`,
+          make: "Toyota",
+          model: "Corolla",
+          modelYear: 2024,
+          category: "SEDAN",
+          transmission: "AUTOMATIC",
+          fuelType: "HYBRID",
+          seatCount: 5,
+          odometerKm: 45000,
+          dailyPrice: "1500.00",
+          currency: "TRY",
+          color: "Beyaz",
+          depositAmount: "3000.00",
+          hasAirConditioning: true,
+        },
+      });
+    };
+
+    it("Tenant kendi aracını başarıyla günceller", async () => {
+      const vehicle = await createTestVehicle(tenantAId!);
+
+      const response = await request(app.getHttpServer())
+        .patch(`/tenant/vehicles/${vehicle.id}`)
+        .set("Authorization", `Bearer ${tenantAToken}`)
+        .send({
+          make: "Honda",
+          model: "Civic",
+          dailyPrice: "1850.50",
+        })
+        .expect(200);
+
+      expect(response.body.make).toBe("Honda");
+      expect(response.body.model).toBe("Civic");
+      expect(response.body.dailyPrice).toBe("1850.50");
+      expect(response.body).not.toHaveProperty("tenantId");
+
+      // Gerçek PostgreSQL kaydını kontrol et.
+      const stored = await prisma.vehicle.findUniqueOrThrow({
+        where: { id: vehicle.id },
+      });
+
+      expect(stored.make).toBe("Honda");
+      expect(stored.model).toBe("Civic");
+      expect(stored.dailyPrice.toFixed(2)).toBe("1850.50");
+
+      // Gönderilmeyen alan korunmalı.
+      expect(stored.odometerKm).toBe(45000);
+    });
+
+    it("JWT olmadan araç güncellenemez", async () => {
+      const vehicle = await createTestVehicle(tenantAId!);
+
+      await request(app.getHttpServer())
+        .patch(`/tenant/vehicles/${vehicle.id}`)
+        .send({ make: "Honda" })
+        .expect(401);
+    });
+
+    it("Başka Tenant'ın aracını güncelleyemez", async () => {
+      const vehicle = await createTestVehicle(tenantAId!);
+
+      await request(app.getHttpServer())
+        .patch(`/tenant/vehicles/${vehicle.id}`)
+        .set("Authorization", `Bearer ${tenantBToken}`)
+        .send({ make: "Honda" })
+        .expect(404);
+
+      const stored = await prisma.vehicle.findUniqueOrThrow({
+        where: { id: vehicle.id },
+      });
+
+      expect(stored.make).toBe("Toyota");
+    });
+
+    it("Boş PATCH isteğini reddeder", async () => {
+      const vehicle = await createTestVehicle(tenantAId!);
+
+      await request(app.getHttpServer())
+        .patch(`/tenant/vehicles/${vehicle.id}`)
+        .set("Authorization", `Bearer ${tenantAToken}`)
+        .send({})
+        .expect(400);
+    });
+
+    it("Zorunlu alanın null yapılmasını reddeder", async () => {
+      const vehicle = await createTestVehicle(tenantAId!);
+
+      await request(app.getHttpServer())
+        .patch(`/tenant/vehicles/${vehicle.id}`)
+        .set("Authorization", `Bearer ${tenantAToken}`)
+        .send({ make: null })
+        .expect(400);
+    });
+
+    it("Kilometre azaltılmasını engeller", async () => {
+      const vehicle = await createTestVehicle(tenantAId!);
+
+      await request(app.getHttpServer())
+        .patch(`/tenant/vehicles/${vehicle.id}`)
+        .set("Authorization", `Bearer ${tenantAToken}`)
+        .send({ odometerKm: 40000 })
+        .expect(400);
+
+      const stored = await prisma.vehicle.findUniqueOrThrow({
+        where: { id: vehicle.id },
+      });
+
+      expect(stored.odometerKm).toBe(45000);
+    });
+
+    it("Nullable alanları null ile temizler", async () => {
+      const vehicle = await createTestVehicle(tenantAId!);
+
+      const response = await request(app.getHttpServer())
+        .patch(`/tenant/vehicles/${vehicle.id}`)
+        .set("Authorization", `Bearer ${tenantAToken}`)
+        .send({
+          color: null,
+          depositAmount: null,
+          hasAirConditioning: null,
+        })
+        .expect(200);
+
+      expect(response.body.color).toBeNull();
+      expect(response.body.depositAmount).toBeNull();
+      expect(response.body.hasAirConditioning).toBeNull();
+
+      const stored = await prisma.vehicle.findUniqueOrThrow({
+        where: { id: vehicle.id },
+      });
+
+      expect(stored.color).toBeNull();
+      expect(stored.depositAmount).toBeNull();
+      expect(stored.hasAirConditioning).toBeNull();
+    });
+
+    it("Aynı Tenant içindeki duplicate plakayı reddeder", async () => {
+      const first = await createTestVehicle(tenantAId!);
+      const second = await createTestVehicle(tenantAId!);
+
+      await request(app.getHttpServer())
+        .patch(`/tenant/vehicles/${second.id}`)
+        .set("Authorization", `Bearer ${tenantAToken}`)
+        .send({ plate: first.plate })
+        .expect(409);
+
+      const stored = await prisma.vehicle.findUniqueOrThrow({
+        where: { id: second.id },
+      });
+
+      expect(stored.plate).toBe(second.plate);
+    });
+
+    it("İstemcinin sistem alanlarını değiştirmesini reddeder", async () => {
+      const vehicle = await createTestVehicle(tenantAId!);
+
+      await request(app.getHttpServer())
+        .patch(`/tenant/vehicles/${vehicle.id}`)
+        .set("Authorization", `Bearer ${tenantAToken}`)
+        .send({
+          tenantId: tenantBId,
+          fleetStatus: "INACTIVE",
+        })
+        .expect(400);
+    });
+
+    it("ardışık güncellemelerde kilometrenin geri düşmesini engeller", async () => {
+      const vehicle = await createTestVehicle(tenantAId!);
+
+      // Başlangıç kilometresi: 45.000
+
+      // Birinci istek: kilometreyi 60.000'e yükselt.
+      const firstResponse = await request(app.getHttpServer())
+        .patch(`/tenant/vehicles/${vehicle.id}`)
+        .set("Authorization", `Bearer ${tenantAToken}`)
+        .send({ odometerKm: 60000 })
+        .expect(200);
+
+      expect(firstResponse.body.odometerKm).toBe(60000);
+
+      // İkinci istek: 55.000'e düşürmeye çalış.
+      await request(app.getHttpServer())
+        .patch(`/tenant/vehicles/${vehicle.id}`)
+        .set("Authorization", `Bearer ${tenantAToken}`)
+        .send({ odometerKm: 55000 })
+        .expect(400);
+
+      // Gerçek veritabanındaki son değeri doğrula.
+      const stored = await prisma.vehicle.findUniqueOrThrow({
+        where: { id: vehicle.id },
+      });
+
+      expect(stored.odometerKm).toBe(60000);
+    });
+  });
 });

@@ -6,6 +6,7 @@ import { VehiclesService } from "./vehicles.service.js";
 import type { TenantAuthenticatedRequest } from "../auth/guards/tenant-jwt-auth.guard.js";
 import { ListVehiclesQueryDto } from "./dto/list-vehicles-query.dto.js";
 import { CreateVehicleDto } from "./dto/create-vehicle.dto.js";
+import { UpdateVehicleDto } from "./dto/update-vehicle.dto.js";
 
 vi.mock("../auth/tenant-auth-context.js", () => ({
   getTenantAuthContext: vi.fn((request) => {
@@ -22,12 +23,14 @@ describe("VehiclesController", () => {
   const findOneForTenant = vi.fn();
   const createForTenant = vi.fn();
   const updateStatusForTenant = vi.fn();
+  const updateForTenant = vi.fn();
 
   const service = {
     findAllForTenant,
     findOneForTenant,
     createForTenant,
     updateStatusForTenant,
+    updateForTenant, // F5
   } as unknown as VehiclesService;
 
   const controller = new VehiclesController(service);
@@ -39,41 +42,41 @@ describe("VehiclesController", () => {
       },
     }) as unknown as TenantAuthenticatedRequest;
 
-beforeEach(() => {
-  vi.resetAllMocks();
+  beforeEach(() => {
+    vi.resetAllMocks();
 
-  // F3 — Araç listeleme
-  findAllForTenant.mockResolvedValue({
-    items: [],
-    pagination: {
-      page: 1,
-      limit: 20,
-      total: 0,
-      totalPages: 0,
-    },
-  });
+    // F3 — Araç listeleme
+    findAllForTenant.mockResolvedValue({
+      items: [],
+      pagination: {
+        page: 1,
+        limit: 20,
+        total: 0,
+        totalPages: 0,
+      },
+    });
 
-  // F3 — Araç detayı
-  findOneForTenant.mockResolvedValue({
-    id: 'vehicle_1',
-    plate: '34 ABC 123',
-  });
+    // F3 — Araç detayı
+    findOneForTenant.mockResolvedValue({
+      id: "vehicle_1",
+      plate: "34 ABC 123",
+    });
 
-  // F4 — Araç oluşturma
-  createForTenant.mockResolvedValue({
-    id: 'vehicle_1',
-    plate: '38 ABC 123',
-    dailyPrice: '1500.00',
-    fleetStatus: 'ACTIVE',
-  });
+    // F4 — Araç oluşturma
+    createForTenant.mockResolvedValue({
+      id: "vehicle_1",
+      plate: "38 ABC 123",
+      dailyPrice: "1500.00",
+      fleetStatus: "ACTIVE",
+    });
 
-  // G4 — Aktif/pasif durum güncelleme
-  updateStatusForTenant.mockResolvedValue({
-    id: 'vehicle_1',
-    fleetStatus: 'INACTIVE',
-    deactivatedAt: '2026-11-25T17:00:00.000Z',
+    // G4 — Aktif/pasif durum güncelleme
+    updateStatusForTenant.mockResolvedValue({
+      id: "vehicle_1",
+      fleetStatus: "INACTIVE",
+      deactivatedAt: "2026-11-25T17:00:00.000Z",
+    });
   });
-});
 
   it("listeleme için oturumdaki tenantId değerini kullanır", async () => {
     const request = createRequest("tenant_a");
@@ -194,61 +197,109 @@ beforeEach(() => {
     });
   });
 
+  it("durum güncellemede tenantId değerini oturumdan alır", async () => {
+    const request = createRequest("tenant_a");
 
-it('durum güncellemede tenantId değerini oturumdan alır', async () => {
-  const request = createRequest('tenant_a');
+    const body = {
+      fleetStatus: "INACTIVE" as const,
+    };
 
-  const body = {
-    fleetStatus: 'INACTIVE' as const,
-  };
+    await controller.updateStatus(request, "vehicle_1", body);
 
-  await controller.updateStatus(
-    request,
-    'vehicle_1',
-    body,
-  );
-
-  expect(updateStatusForTenant).toHaveBeenCalledWith(
-    'tenant_a',
-    'vehicle_1',
-    'INACTIVE',
-  );
-});
-
-
-it('durum güncelleme sonucunu değiştirmeden döndürür', async () => {
-  const request = createRequest('tenant_a');
-
-  const body = {
-    fleetStatus: 'INACTIVE' as const,
-  };
-
-  const result = await controller.updateStatus(
-    request,
-    'vehicle_1',
-    body,
-  );
-
-  expect(result).toEqual({
-    id: 'vehicle_1',
-    fleetStatus: 'INACTIVE',
-    deactivatedAt: '2026-11-25T17:00:00.000Z',
+    expect(updateStatusForTenant).toHaveBeenCalledWith(
+      "tenant_a",
+      "vehicle_1",
+      "INACTIVE",
+    );
   });
-});
 
+  it("durum güncelleme sonucunu değiştirmeden döndürür", async () => {
+    const request = createRequest("tenant_a");
 
-it('durum güncellemede Tenant oturumu yoksa isteği reddeder', async () => {
-  const request = {} as TenantAuthenticatedRequest;
+    const body = {
+      fleetStatus: "INACTIVE" as const,
+    };
 
-  await expect(
-    controller.updateStatus(
-      request,
-      'vehicle_1',
-      { fleetStatus: 'INACTIVE' },
-    ),
-  ).rejects.toThrow(UnauthorizedException);
+    const result = await controller.updateStatus(request, "vehicle_1", body);
 
-  expect(updateStatusForTenant).not.toHaveBeenCalled();
-});
+    expect(result).toEqual({
+      id: "vehicle_1",
+      fleetStatus: "INACTIVE",
+      deactivatedAt: "2026-11-25T17:00:00.000Z",
+    });
+  });
 
+  it("durum güncellemede Tenant oturumu yoksa isteği reddeder", async () => {
+    const request = {} as TenantAuthenticatedRequest;
+
+    await expect(
+      controller.updateStatus(request, "vehicle_1", {
+        fleetStatus: "INACTIVE",
+      }),
+    ).rejects.toThrow(UnauthorizedException);
+
+    expect(updateStatusForTenant).not.toHaveBeenCalled();
+  });
+
+  describe("PATCH /tenant/vehicles/:id", () => {
+    it("doğrulanmış Tenant kimliğiyle güncelleme yapar", async () => {
+      const request = createRequest("tenant_a");
+
+      const dto = Object.assign(new UpdateVehicleDto(), {
+        make: "Honda",
+      });
+
+      const updatedVehicle = {
+        id: "vehicle_1",
+        make: "Honda",
+      };
+
+      updateForTenant.mockResolvedValue(updatedVehicle);
+
+      const result = await controller.update(request, "vehicle_1", dto);
+
+      expect(updateForTenant).toHaveBeenCalledWith(
+        "tenant_a",
+        "vehicle_1",
+        dto,
+      );
+
+      expect(result).toEqual(updatedVehicle);
+    });
+
+    it("farklı Tenant oturumunun kimliğini doğru aktarır", async () => {
+      const request = createRequest("tenant_b");
+
+      const dto = Object.assign(new UpdateVehicleDto(), {
+        model: "Civic",
+      });
+
+      updateForTenant.mockResolvedValue({
+        id: "vehicle_1",
+        model: "Civic",
+      });
+
+      await controller.update(request, "vehicle_1", dto);
+
+      expect(updateForTenant).toHaveBeenCalledWith(
+        "tenant_b",
+        "vehicle_1",
+        dto,
+      );
+    });
+
+    it("Tenant oturumu yoksa güncelleme yapmaz", async () => {
+      const request = {} as TenantAuthenticatedRequest;
+
+      const dto = Object.assign(new UpdateVehicleDto(), {
+        make: "Honda",
+      });
+
+      await expect(
+        controller.update(request, "vehicle_1", dto),
+      ).rejects.toThrow(UnauthorizedException);
+
+      expect(updateForTenant).not.toHaveBeenCalled();
+    });
+  });
 });

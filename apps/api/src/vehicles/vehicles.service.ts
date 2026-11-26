@@ -1,20 +1,28 @@
+import { FleetStatus, Prisma } from "../../generated/prisma/client.js";
 
 import {
-  FleetStatus,
-  Prisma,
-} from '../../generated/prisma/client.js';
-
-import {
+  BadRequestException,
   ConflictException,
   Injectable,
   NotFoundException,
-} from '@nestjs/common';
+} from "@nestjs/common";
 
-import { PrismaService } from '../prisma/prisma.service.js';
-import type { ListVehiclesQueryDto } from './dto/list-vehicles-query.dto.js';
-import { toTenantVehicleResponse } from './vehicle-response.mapper.js';
-import { CreateVehicleDto } from './dto/create-vehicle.dto.js';
+import { PrismaService } from "../prisma/prisma.service.js";
+import type { ListVehiclesQueryDto } from "./dto/list-vehicles-query.dto.js";
+import { toTenantVehicleResponse } from "./vehicle-response.mapper.js";
+import { CreateVehicleDto } from "./dto/create-vehicle.dto.js";
+import { UpdateVehicleDto } from "./dto/update-vehicle.dto.js";
+import { assertNonEmptyVehicleUpdate } from "./dto/update-vehicle.dto.js";
 
+function normalizeNullableText(
+  value: string | null | undefined,
+): string | null | undefined {
+  if (value === null || value === undefined) {
+    return value;
+  }
+
+  return value.trim() || null;
+}
 
 @Injectable()
 export class VehiclesService {
@@ -206,10 +214,7 @@ export class VehiclesService {
       },
       data: {
         fleetStatus,
-        deactivatedAt:
-          fleetStatus === FleetStatus.INACTIVE
-            ? new Date()
-            : null,
+        deactivatedAt: fleetStatus === FleetStatus.INACTIVE ? new Date() : null,
       },
     });
 
@@ -221,9 +226,186 @@ export class VehiclesService {
     });
 
     if (!vehicle) {
-      throw new NotFoundException('Vehicle not found');
+      throw new NotFoundException("Vehicle not found");
     }
 
     return toTenantVehicleResponse(vehicle);
+  }
+
+  async updateForTenant(
+    tenantId: string,
+    vehicleId: string,
+    dto: UpdateVehicleDto,
+  ) {
+    // 1. En az bir alan gönderilmiş olmalı.
+    assertNonEmptyVehicleUpdate(dto);
+
+    // 2. Araç yalnızca giriş yapan Tenant kapsamında aranır.
+    const existingVehicle = await this.prisma.vehicle.findFirst({
+      where: {
+        id: vehicleId,
+        tenantId,
+      },
+    });
+
+    // 3. Araç yoksa veya başka Tenant'a aitse aynı hata döner.
+    if (!existingVehicle) {
+      throw new NotFoundException("Vehicle not found");
+    }
+
+    if (
+      dto.odometerKm !== undefined &&
+      dto.odometerKm < existingVehicle.odometerKm
+    ) {
+      throw new BadRequestException("Vehicle odometer cannot be decreased.");
+    }
+
+    const data: Prisma.VehicleUpdateManyMutationInput = {
+      // Araç kimliği
+      ...(dto.plate !== undefined
+        ? { plate: dto.plate.trim().toUpperCase() }
+        : {}),
+
+      ...(dto.make !== undefined ? { make: dto.make.trim() } : {}),
+
+      ...(dto.model !== undefined ? { model: dto.model.trim() } : {}),
+
+      ...(dto.modelYear !== undefined ? { modelYear: dto.modelYear } : {}),
+
+      ...(dto.category !== undefined ? { category: dto.category } : {}),
+
+      // Teknik bilgiler
+      ...(dto.transmission !== undefined
+        ? { transmission: dto.transmission }
+        : {}),
+
+      ...(dto.fuelType !== undefined ? { fuelType: dto.fuelType } : {}),
+
+      ...(dto.seatCount !== undefined ? { seatCount: dto.seatCount } : {}),
+
+      ...(dto.odometerKm !== undefined ? { odometerKm: dto.odometerKm } : {}),
+
+      // Fiyatlandırma
+      ...(dto.dailyPrice !== undefined
+        ? { dailyPrice: new Prisma.Decimal(dto.dailyPrice) }
+        : {}),
+
+      ...(dto.currency !== undefined ? { currency: dto.currency } : {}),
+
+      // Opsiyonel araç bilgileri
+      ...(dto.vin !== undefined ? { vin: normalizeNullableText(dto.vin) } : {}),
+
+      ...(dto.color !== undefined
+        ? { color: normalizeNullableText(dto.color) }
+        : {}),
+
+      ...(dto.notes !== undefined
+        ? { notes: normalizeNullableText(dto.notes) }
+        : {}),
+
+      ...(dto.internalCode !== undefined
+        ? { internalCode: normalizeNullableText(dto.internalCode) }
+        : {}),
+
+      ...(dto.trim !== undefined
+        ? { trim: normalizeNullableText(dto.trim) }
+        : {}),
+
+      ...(dto.currentLocationLabel !== undefined
+        ? {
+            currentLocationLabel: normalizeNullableText(
+              dto.currentLocationLabel,
+            ),
+          }
+        : {}),
+
+      // Opsiyonel sayısal bilgiler
+      ...(dto.doorCount !== undefined ? { doorCount: dto.doorCount } : {}),
+
+      ...(dto.includedMileageKm !== undefined
+        ? { includedMileageKm: dto.includedMileageKm }
+        : {}),
+
+      // Klima bilgisi
+      ...(dto.hasAirConditioning !== undefined
+        ? { hasAirConditioning: dto.hasAirConditioning }
+        : {}),
+
+      // Depozito tutarı
+      ...(dto.depositAmount !== undefined
+        ? {
+            depositAmount:
+              dto.depositAmount === null
+                ? null
+                : new Prisma.Decimal(dto.depositAmount),
+          }
+        : {}),
+
+      // Ek kilometre ücreti
+      ...(dto.extraKmPrice !== undefined
+        ? {
+            extraKmPrice:
+              dto.extraKmPrice === null
+                ? null
+                : new Prisma.Decimal(dto.extraKmPrice),
+          }
+        : {}),
+    };
+
+    let result: Prisma.BatchPayload;
+
+    try {
+      result = await this.prisma.vehicle.updateMany({
+        where: {
+          id: vehicleId,
+          tenantId,
+          ...(dto.odometerKm !== undefined
+            ? { odometerKm: { lte: dto.odometerKm } }
+            : {}),
+        },
+        data,
+      });
+    } catch (error: unknown) {
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === "P2002"
+      ) {
+        throw new ConflictException(
+          "A vehicle with the same unique information already exists.",
+        );
+      }
+
+      throw error;
+    }
+
+    if (result.count === 0) {
+      const currentVehicle = await this.prisma.vehicle.findFirst({
+        where: {
+          id: vehicleId,
+          tenantId,
+        },
+      });
+
+      if (!currentVehicle) {
+        throw new NotFoundException("Vehicle not found");
+      }
+
+      throw new ConflictException(
+        "Vehicle could not be updated because its data has changed.",
+      );
+    }
+
+    const updatedVehicle = await this.prisma.vehicle.findFirst({
+      where: {
+        id: vehicleId,
+        tenantId,
+      },
+    });
+
+    if (!updatedVehicle) {
+      throw new NotFoundException("Vehicle not found");
+    }
+
+    return toTenantVehicleResponse(updatedVehicle);
   }
 }

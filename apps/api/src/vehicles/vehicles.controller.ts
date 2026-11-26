@@ -1,4 +1,14 @@
-import { Controller, Get, Param, Query, Post, Body, Patch, Req, UseGuards } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Param,
+  Query,
+  Post,
+  Body,
+  Patch,
+  Req,
+  UseGuards,
+} from "@nestjs/common";
 import {
   ApiBearerAuth,
   ApiOperation,
@@ -20,7 +30,9 @@ import { VehicleListResponseDto } from "./dto/vehicle-list-response.dto.js";
 import { TenantVehicleResponseDto } from "./dto/tenant-vehicle-response.dto.js";
 
 import { CreateVehicleDto } from "./dto/create-vehicle.dto.js";
-import { UpdateVehicleStatusDto } from './dto/update-vehicle-status.dto.js';
+import { UpdateVehicleStatusDto } from "./dto/update-vehicle-status.dto.js";
+
+import { UpdateVehicleDto } from "./dto/update-vehicle.dto.js";
 
 @ApiTags("Tenant Vehicles")
 @ApiBearerAuth()
@@ -87,41 +99,79 @@ export class VehiclesController {
     return this.vehiclesService.findOneForTenant(auth.tenantId, vehicleId);
   }
 
-  
-@Patch(':id/status')
-@ApiOperation({
-  summary: 'Tenant aracının aktif/pasif durumunu günceller',
-})
-@ApiResponse({
-  status: 200,
-  description: 'Araç durumu başarıyla güncellendi.',
-  type: TenantVehicleResponseDto,
-})
-@ApiResponse({
-  status: 400,
-  description: 'Geçersiz araç durumu veya istek gövdesi.',
-})
-@ApiResponse({
-  status: 401,
-  description: 'Kimlik doğrulama gerekli.',
-})
-@ApiResponse({
-  status: 404,
-  description: 'Araç bulunamadı.',
-})
-async updateStatus(
-  @Req() request: TenantAuthenticatedRequest,
-  @Param('id') vehicleId: string,
-  @Body() body: UpdateVehicleStatusDto,
-) {
-  const auth = getTenantAuthContext(request);
+  @Patch(":id")
+  @ApiOperation({
+    summary: "Update a vehicle for the authenticated tenant",
+    description:
+      "Partially updates a vehicle belonging to the authenticated tenant. " +
+      "Omitted fields remain unchanged, nullable fields can be cleared with null. " +
+      "Vehicle ownership and system-managed fields cannot be changed.",
+  })
+  @ApiResponse({
+    status: 200,
+    description: "Vehicle updated successfully.",
+    type: TenantVehicleResponseDto,
+  })
+  @ApiResponse({
+    status: 400,
+    description: "Invalid update data or odometer decrease.",
+  })
+  @ApiResponse({
+    status: 401,
+    description: "Missing or invalid Tenant Admin session.",
+  })
+  @ApiResponse({
+    status: 404,
+    description: "Vehicle not found or belongs to another tenant.",
+  })
+  @ApiResponse({
+    status: 409,
+    description: "Vehicle update conflict or duplicate identifier.",
+  })
+  async update(
+    @Req() request: TenantAuthenticatedRequest,
+    @Param("id") vehicleId: string,
+    @Body() dto: UpdateVehicleDto,
+  ) {
+    const auth = getTenantAuthContext(request);
 
-  return this.vehiclesService.updateStatusForTenant(
-    auth.tenantId,
-    vehicleId,
-    body.fleetStatus,
-  );
-}
+    return this.vehiclesService.updateForTenant(auth.tenantId, vehicleId, dto);
+  }
+
+  @Patch(":id/status")
+  @ApiOperation({
+    summary: "Tenant aracının aktif/pasif durumunu günceller",
+  })
+  @ApiResponse({
+    status: 200,
+    description: "Araç durumu başarıyla güncellendi.",
+    type: TenantVehicleResponseDto,
+  })
+  @ApiResponse({
+    status: 400,
+    description: "Geçersiz araç durumu veya istek gövdesi.",
+  })
+  @ApiResponse({
+    status: 401,
+    description: "Kimlik doğrulama gerekli.",
+  })
+  @ApiResponse({
+    status: 404,
+    description: "Araç bulunamadı.",
+  })
+  async updateStatus(
+    @Req() request: TenantAuthenticatedRequest,
+    @Param("id") vehicleId: string,
+    @Body() body: UpdateVehicleStatusDto,
+  ) {
+    const auth = getTenantAuthContext(request);
+
+    return this.vehiclesService.updateStatusForTenant(
+      auth.tenantId,
+      vehicleId,
+      body.fleetStatus,
+    );
+  }
 
   @Post()
   @ApiOperation({

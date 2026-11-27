@@ -385,32 +385,32 @@ describe("Tenant Isolation E2E", () => {
     });
   });
 
+  const createTestVehicle = async (tenantId: string) => {
+    await assertTestDatabase();
+
+    return prisma.vehicle.create({
+      data: {
+        tenantId,
+        plate: `E2E ${randomUUID().slice(0, 8).toUpperCase()}`,
+        make: "Toyota",
+        model: "Corolla",
+        modelYear: 2024,
+        category: "SEDAN",
+        transmission: "AUTOMATIC",
+        fuelType: "HYBRID",
+        seatCount: 5,
+        odometerKm: 45000,
+        dailyPrice: "1500.00",
+        currency: "TRY",
+        color: "Beyaz",
+        depositAmount: "3000.00",
+        hasAirConditioning: true,
+      },
+    });
+  };
   describe("Vehicle Update E2E", () => {
     // Her test için ayrı bir araç oluşturuyoruz.
     // Böylece testler birbirinin verisini değiştirmiyor.
-    const createTestVehicle = async (tenantId: string) => {
-      await assertTestDatabase();
-
-      return prisma.vehicle.create({
-        data: {
-          tenantId,
-          plate: `E2E ${randomUUID().slice(0, 8).toUpperCase()}`,
-          make: "Toyota",
-          model: "Corolla",
-          modelYear: 2024,
-          category: "SEDAN",
-          transmission: "AUTOMATIC",
-          fuelType: "HYBRID",
-          seatCount: 5,
-          odometerKm: 45000,
-          dailyPrice: "1500.00",
-          currency: "TRY",
-          color: "Beyaz",
-          depositAmount: "3000.00",
-          hasAirConditioning: true,
-        },
-      });
-    };
 
     it("Tenant kendi aracını başarıyla günceller", async () => {
       const vehicle = await createTestVehicle(tenantAId!);
@@ -587,6 +587,201 @@ describe("Tenant Isolation E2E", () => {
       });
 
       expect(stored.odometerKm).toBe(60000);
+    });
+  });
+
+  describe("F6 Vehicle Security E2E", () => {
+    const auth = (token: string) => `Bearer ${token}`;
+
+    it("liste, detay ve toplam sayısında Tenant izolasyonunu korur", async () => {
+      const beforeA = await request(app.getHttpServer())
+        .get("/tenant/vehicles")
+        .set("Authorization", auth(tenantAToken))
+        .expect(200);
+
+      const beforeB = await request(app.getHttpServer())
+        .get("/tenant/vehicles")
+        .set("Authorization", auth(tenantBToken))
+        .expect(200);
+
+      const totalOf = (body: {
+        total?: number;
+        meta?: { total?: number };
+        pagination?: { total?: number };
+      }) => body.total ?? body.meta?.total ?? body.pagination?.total;
+
+      const initialA = totalOf(beforeA.body);
+      const initialB = totalOf(beforeB.body);
+
+      expect(initialA).toEqual(expect.any(Number));
+      expect(initialB).toEqual(expect.any(Number));
+
+      const vehicleA1 = await createTestVehicle(tenantAId!);
+      const vehicleA2 = await createTestVehicle(tenantAId!);
+      const vehicleB = await createTestVehicle(tenantBId!);
+
+      const listA = await request(app.getHttpServer())
+        .get("/tenant/vehicles")
+        .query({ page: 1, limit: 100 })
+        .set("Authorization", auth(tenantAToken))
+        .expect(200);
+
+      const listB = await request(app.getHttpServer())
+        .get("/tenant/vehicles")
+        .query({ page: 1, limit: 100 })
+        .set("Authorization", auth(tenantBToken))
+        .expect(200);
+
+      expect(totalOf(listA.body)).toBe(initialA! + 2);
+      expect(totalOf(listB.body)).toBe(initialB! + 1);
+
+      const idsA = listA.body.items.map((v: { id: string }) => v.id);
+      const idsB = listB.body.items.map((v: { id: string }) => v.id);
+
+      expect(idsA).toContain(vehicleA1.id);
+      expect(idsA).toContain(vehicleA2.id);
+      expect(idsA).not.toContain(vehicleB.id);
+
+      expect(idsB).toContain(vehicleB.id);
+      expect(idsB).not.toContain(vehicleA1.id);
+      expect(idsB).not.toContain(vehicleA2.id);
+
+      await request(app.getHttpServer())
+        .get(`/tenant/vehicles/${vehicleA1.id}`)
+        .set("Authorization", auth(tenantBToken))
+        .expect(404);
+
+      await request(app.getHttpServer())
+        .get(`/tenant/vehicles/${vehicleB.id}`)
+        .set("Authorization", auth(tenantAToken))
+        .expect(404);
+
+      const detailA = await request(app.getHttpServer())
+        .get(`/tenant/vehicles/${vehicleA1.id}`)
+        .set("Authorization", auth(tenantAToken))
+        .expect(200);
+
+      expect(detailA.body.id).toBe(vehicleA1.id);
+      expect(detailA.body).not.toHaveProperty("tenantId");
+    });
+
+    it.each([
+      { page: 0 },
+      { page: -1 },
+      { page: "abc" },
+      { page: 1.5 },
+      { limit: 0 },
+      { limit: 101 },
+      { limit: -5 },
+      { limit: "abc" },
+    ])("geçersiz pagination değerini reddeder: %j", async (query) => {
+      await request(app.getHttpServer())
+        .get("/tenant/vehicles")
+        .set("Authorization", auth(tenantAToken))
+        .query(query)
+        .expect(400);
+    });
+
+    it.each([
+      { category: "INVALID_CATEGORY" },
+      { transmission: "INVALID_TRANSMISSION" },
+      { fuelType: "INVALID_FUEL" },
+      { fleetStatus: "INVALID_STATUS" },
+      { sortBy: "tenantId" },
+      { sortOrder: "invalid" },
+    ])("geçersiz filtre veya enum değerini reddeder: %j", async (query) => {
+      await request(app.getHttpServer())
+        .get("/tenant/vehicles")
+        .set("Authorization", auth(tenantAToken))
+        .query(query)
+        .expect(400);
+    });
+
+    it("geçersiz decimal fiyatı reddeder ve kaydı değiştirmez", async () => {
+      const vehicle = await createTestVehicle(tenantAId!);
+
+      await request(app.getHttpServer())
+        .patch(`/tenant/vehicles/${vehicle.id}`)
+        .set("Authorization", auth(tenantAToken))
+        .send({ dailyPrice: "not-a-decimal" })
+        .expect(400);
+
+      const stored = await prisma.vehicle.findUniqueOrThrow({
+        where: { id: vehicle.id },
+      });
+
+      expect(stored.dailyPrice.toFixed(2)).toBe("1500.00");
+    });
+
+    it("Platform Admin tokenını araç API endpointlerinde reddeder", async () => {
+      const vehicle = await createTestVehicle(tenantAId!);
+
+      await request(app.getHttpServer())
+        .get("/tenant/vehicles")
+        .set("Authorization", auth(platformToken))
+        .expect(401);
+
+      await request(app.getHttpServer())
+        .get(`/tenant/vehicles/${vehicle.id}`)
+        .set("Authorization", auth(platformToken))
+        .expect(401);
+
+      await request(app.getHttpServer())
+        .patch(`/tenant/vehicles/${vehicle.id}`)
+        .set("Authorization", auth(platformToken))
+        .send({ make: "Honda" })
+        .expect(401);
+
+      await request(app.getHttpServer())
+        .patch(`/tenant/vehicles/${vehicle.id}/status`)
+        .set("Authorization", auth(platformToken))
+        .send({ fleetStatus: "INACTIVE" })
+        .expect(401);
+    });
+
+    it("geçersiz JWT ile araç listesine erişimi reddeder", async () => {
+      await request(app.getHttpServer())
+        .get("/tenant/vehicles")
+        .set("Authorization", "Bearer invalid.jwt.signature")
+        .expect(401);
+    });
+
+    it("silinmiş oturuma ait geçerli JWT'yi reddeder", async () => {
+      const session = await prisma.tenantAdminSession.create({
+        data: {
+          tenantAdminId: adminAId!,
+          refreshTokenHash: randomBytes(32).toString("hex"),
+          expiresAt: new Date(Date.now() + 60 * 60 * 1000),
+        },
+      });
+
+      const jwtService = app.get(JwtService);
+
+      const token = await jwtService.signAsync({
+        sub: adminAId,
+        type: "tenant_admin",
+        tenantId: tenantAId,
+        sessionId: session.id,
+      });
+
+      try {
+        // Oturum geçerliyken erişim başarılı.
+        await request(app.getHttpServer())
+          .get("/tenant/vehicles")
+          .set("Authorization", auth(token))
+          .expect(200);
+      } finally {
+        // Sadece bu testin oluşturduğu oturumu kaldır.
+        await prisma.tenantAdminSession.deleteMany({
+          where: { id: session.id },
+        });
+      }
+
+      // JWT imzası geçerli olsa bile DB oturumu yok.
+      await request(app.getHttpServer())
+        .get("/tenant/vehicles")
+        .set("Authorization", auth(token))
+        .expect(401);
     });
   });
 });

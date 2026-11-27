@@ -2,244 +2,104 @@
 
 **A Multi-Tenant Car Rental Management SaaS Platform**
 
-RentACar is a web-based SaaS platform in development, designed to help multiple car rental businesses manage their vehicles, rental pricing, and reservations from one platform.
+RentACar is a white-label SaaS platform under active development for independent car rental businesses. It provides a shared technical foundation with separate, tenant-scoped business data and administration interfaces.
 
-Each rental business will have its own workspace and access only to its authorized data. Platform administrators will manage tenant onboarding and platform-level operations. Business-specific branding and custom domains are planned capabilities.
+## Current capabilities
 
-> **Project status:** In development. Items described as planned are not yet implemented unless explicitly stated otherwise.
+- Platform Admin authentication and tenant application review, approval, rejection and safe deletion of eligible applications.
+- Tenant Admin provisioning, invitation delivery via a transactional outbox, account activation and access/refresh token session management.
+- Protected Platform Admin and Tenant Admin dashboards.
+- Tenant-scoped vehicle data model and list, detail, create, update and fleet-status APIs.
+- Vehicle listing UI integrated with the backend; create/edit UI integration and CRUD security regression testing are in progress.
 
-## Table of Contents
+The project is not yet production-ready. Customer management, reservations, date-based availability, branding and custom domains are planned. Online payments are outside the initial release scope. Active fleet membership does not imply rental availability.
 
-- [Project Overview](#project-overview)
-- [Planned Features](#planned-features)
-- [Technology Stack](#technology-stack)
-- [Architecture](#architecture)
-- [Multi-Tenant Design](#multi-tenant-design)
-- [API Documentation](#api-documentation)
-- [Planned Repository Structure](#planned-repository-structure)
-- [Development Setup](#development-setup)
-- [Roadmap](#roadmap)
-- [Security Principles](#security-principles)
-- [Contributing](#contributing)
-- [License](#license)
+## Technology stack
 
-## Project Overview
-
-RentACar aims to provide a maintainable and scalable foundation for car rental businesses to manage day-to-day operations online.
-
-### Goals
-
-- Support multiple independent rental businesses on one platform.
-- Manage vehicle information, availability, and rental prices.
-- Create and manage reservations.
-- Enforce tenant-level data isolation on the backend.
-- Provide a documented REST API for frontend/backend integration.
-- Establish automated testing and repeatable deployment practices.
-
-**Initial scope:** vehicle management, pricing, and reservations. Online payment processing is outside the initial release scope.
-
-## Planned Features
-
-### Tenant and Platform Administration
-- Business onboarding and approval by platform administrators.
-- Tenant-specific settings and operational data.
-- Role-based access for platform and business users.
-- Business branding and custom-domain support as a later capability.
-
-### Vehicle and Pricing Management
-- Create and update vehicle records.
-- Store vehicle specifications and availability.
-- Configure rental prices.
-- Display vehicle listings and detail pages.
-
-### Reservation Management
-- Create and manage reservations.
-- Set rental start and end dates.
-- Calculate reservation totals.
-- Track reservation statuses.
-- Validate vehicle availability and prevent overlapping bookings.
-
-### Developer Experience
-- REST API built with NestJS.
-- Interactive API documentation with Swagger UI / OpenAPI.
-- Automated tests and continuous integration as development progresses.
-
-## Technology Stack
-
-| Technology | Purpose |
+| Layer | Technology |
 |---|---|
-| Next.js | Web application |
-| React | User interface |
-| TypeScript | Type-safe development |
-| Tailwind CSS | Styling |
-| NestJS | Backend and REST API |
-| PostgreSQL | Relational database |
-| Prisma ORM | Database access, schema, and migrations |
-| Swagger / OpenAPI | API documentation and interactive testing |
-| Node.js and npm | Runtime and package management |
-| Git and GitHub | Version control and source hosting |
-| Jest | Unit testing |
-| Supertest | HTTP/API testing (planned) |
-| Playwright | End-to-end browser testing (planned) |
-| Docker / Docker Compose | Containerized development and deployment (planned) |
-| GitHub Actions | Continuous integration workflows (planned) |
+| Web | Next.js 16, React 19, TypeScript, Tailwind CSS 4 |
+| API | NestJS 12, TypeScript, REST, Swagger/OpenAPI |
+| Persistence | PostgreSQL, Prisma 7 |
+| Authentication | JWT, Argon2, HttpOnly cookies |
+| Invitation delivery | PostgreSQL transactional outbox, Nodemailer |
+| Testing | Vitest, Supertest, React Testing Library |
+| Tooling | Node.js, npm, Docker Compose, Git/GitHub, ESLint, Oxlint |
+
+See the application package manifests and lockfiles for exact dependency versions.
 
 ## Architecture
 
-The intended architecture separates the web interface, backend API, and relational database:
-
 ```text
-Users and Rental Businesses
-            |
-            v
-    Next.js Web Application
-            |
-          REST API
-            |
-            v
-       NestJS Backend
-  Authentication / Authorization
-       Tenant-aware Logic
-            |
-            v
-         Prisma ORM
-            |
-            v
-        PostgreSQL
+Next.js web application
+        |
+        | REST / server-side session handling
+        v
+NestJS modular backend
+        | authentication, authorization, validation, business rules
+        v
+Prisma ORM
+        v
+PostgreSQL
 ```
 
-The frontend will communicate with the backend through REST endpoints. NestJS will handle business rules, validation, authentication, authorization, and tenant-aware operations. PostgreSQL will store application data, accessed through Prisma.
+Platform Admin and Tenant Admin authentication boundaries are separate. Tenant-owned operations must derive tenant identity from trusted server-side authentication context rather than client-provided IDs. Monetary values use decimal persistence and string serialization. The initial account model supports at most one Tenant Admin per tenant.
 
-## Multi-Tenant Design
+## Engineering approach
 
-Tenant isolation is a core requirement, not an optional frontend feature.
+- Modular monolith with explicit domain boundaries and REST API contracts.
+- Transactional onboarding and durable invitation delivery with retry handling.
+- Separate development and test databases, tenant isolation tests, and reviewed pull requests.
+- Responsive administration interfaces with shared components and distinct visual identities.
 
-The backend must verify the authenticated user's permissions and tenant ownership for every protected operation. Tenant-scoped records—including vehicles, reservations, pricing, and business settings—must not be accessible across tenants without explicit platform-level authorization.
-
-The implementation will prioritize:
-
-- Server-side tenant authorization.
-- Tenant-scoped database queries.
-- Role-based access control.
-- Validation of incoming requests.
-- Tests for unauthorized cross-tenant access.
-
-Business-specific branding and custom domains are planned for a later stage.
-
-## API Documentation
-
-The backend is built with NestJS, and Swagger / OpenAPI is intended to document the REST API and provide an interactive interface for exploring endpoints and testing requests.
-
-When the backend is running locally and Swagger is configured, the expected Swagger UI address is:
-
-**http://localhost:3001/api**
-
-The available documentation will grow as API endpoints are implemented. The address is local to the development machine and is not a public production URL.
-
-## Planned Repository Structure
-
-The repository is intended to evolve toward the following monorepo layout:
+## Repository structure
 
 ```text
 RentACar/
 ├── apps/
-│   ├── web/                 # Next.js frontend
-│   └── api/                 # NestJS backend
-├── docs/                    # Architecture and technical documentation
-├── .github/
-│   └── workflows/           # CI workflows (planned)
-├── .gitignore
-├── README.md
-└── package.json             # Workspace configuration (planned)
+│   ├── api/                # NestJS, Prisma, API tests
+│   └── web/                # Next.js, UI and frontend tests
+├── docs/
+│   ├── architecture/       # Technical decisions and API contracts
+│   └── team/               # Project status and issue history
+├── .github/                # Pull request template
+├── compose.yaml
+├── CONTRIBUTING.md
+├── SETUP.md
+└── README.md
 ```
 
-This is the target structure, not a claim that every directory or configuration file already exists.
+The applications have separate npm manifests; there is no root npm workspace currently.
 
-## Development Setup
+## Local development
 
-### Prerequisites
+Prerequisites: Git, Node.js 24 (recommended), npm, Docker Desktop with Compose, and repository access.
 
-- Node.js and npm
-- PostgreSQL
-- Git
-- A GitHub account
+Follow [SETUP.md](SETUP.md) for configuration, dependencies, database migrations, and application startup. Never commit secrets or use production credentials in local development. Use an isolated test database for database integration and E2E tests.
 
-Docker may be added to the workflow later.
+Local web: http://localhost:3000  
+Local API: http://localhost:3001  
+Swagger UI: http://localhost:3001/api
 
-### Setup status
+## Development and project status
 
-The exact installation commands will be documented after the repository and workspace structure are finalized. The intended setup flow is:
+- [Project status and active work](docs/team/PROJECT_STATUS.md)
+- [Full issue archive](docs/team/ISSUE_HISTORY.md)
+- [Team contribution guidelines](CONTRIBUTING.md)
+- [Tenant authentication architecture](docs/architecture/tenant-authentication.md)
+- [Vehicle management architecture](docs/architecture/vehicle-management.md)
+- [Vehicle API contract](docs/architecture/vehicle-api-contract.md)
 
-1. Clone the repository.
-2. Install dependencies.
-3. Configure local environment variables.
-4. Create or configure the PostgreSQL database.
-5. Apply Prisma migrations.
-6. Start the API and web applications.
-
-### Environment variables
-
-Store database credentials, secrets, and other environment-specific configuration in local environment files or a secure secret manager. Do not commit `.env` files or credentials. An example environment file will be added when configuration is finalized.
+Some architecture documents describe historical proposals; verify implementation against the current code, migrations and tests. GitHub Issues and Projects track work, and PROJECT_STATUS summarizes the current state. Each task uses a dedicated branch, review and relevant quality checks before merge.
 
 ## Roadmap
 
-### Phase 1 — Foundation
-- [x] Select the initial technology stack.
-- [x] Set up the local development tools.
-- [ ] Finalize repository structure and documentation.
-- [ ] Establish development conventions.
+Current focus: vehicle API security and frontend integration, vehicle detail and fleet summaries, and regression testing. Customer domain design and initial APIs are queued. Reservation, pricing and rental workflows, media, branding, production hardening, CI/CD, deployment and recovery remain future work or require further verification.
 
-### Phase 2 — Data and Backend
-- [ ] Design the tenant-aware data model.
-- [ ] Complete Prisma models and migrations.
-- [ ] Integrate Prisma with NestJS.
-- [ ] Implement authentication and authorization.
-- [ ] Implement tenant onboarding and permissions.
-- [ ] Build vehicle, pricing, and reservation API endpoints.
-- [ ] Maintain Swagger / OpenAPI documentation.
+## Security
 
-### Phase 3 — Web Application
-- [ ] Build vehicle listing and detail pages.
-- [ ] Build tenant administration screens.
-- [ ] Add vehicle and pricing management.
-- [ ] Implement reservation workflows.
-- [ ] Connect the frontend to the REST API.
-
-### Phase 4 — Quality and Security
-- [ ] Add unit and integration tests.
-- [ ] Add HTTP API tests with Supertest.
-- [ ] Add end-to-end tests with Playwright.
-- [ ] Test tenant isolation and authorization boundaries.
-- [ ] Improve validation, error handling, and logging.
-
-### Phase 5 — Delivery and Operations
-- [ ] Add Docker and Docker Compose configuration.
-- [ ] Configure GitHub Actions for automated checks.
-- [ ] Document deployment and environment configuration.
-- [ ] Establish backup and recovery procedures.
-
-## Security Principles
-
-Security will be built into the application as features are implemented. Key requirements include:
-
-- Secure authentication and authorization.
-- Server-side tenant isolation.
-- Input validation and safe error handling.
-- Secure password hashing.
-- Least-privilege access control.
-- Protection of secrets and database credentials.
-- Automated tests for authorization and tenant boundaries.
-
-These are design and implementation goals; they should not be interpreted as a claim that all controls are already implemented or audited.
-
-## Contributing
-
-RentACar is currently under development. Contribution guidelines, branching conventions, and pull request procedures will be documented as the project matures. Changes should prioritize readability, maintainability, security, and testability.
+Tenant isolation, server-side authorization, input validation, safe error responses, protected credentials and automated security tests are core requirements. Production readiness and security controls must be verified before launch.
 
 ## License
 
-A license has not yet been selected. Until a license is added, no permissions to reuse, distribute, or modify this project should be assumed.
-
----
-
-**Built with Next.js, NestJS, TypeScript, PostgreSQL, and Prisma.**
+No license has been selected yet. No permission to reuse or distribute the project should be assumed.

@@ -3,6 +3,7 @@ import type {
   FleetStatus,
   Transmission,
   FuelType,
+  Vehicle,
   VehicleDisplayData,
 } from "@/types/vehicle";
 
@@ -46,7 +47,7 @@ export async function fetchVehicles(
   query: VehicleListQuery = {},
   signal?: AbortSignal,
 ): Promise<VehicleListResponse> {
-  const params = new URLSearchParams();   //Arama,filtreleme,sayfalama değerlerini url e dönüştürür
+  const params = new URLSearchParams(); //Arama,filtreleme,sayfalama değerlerini url e dönüştürür
 
   if (query.page !== undefined) {
     params.set("page", String(query.page));
@@ -135,10 +136,7 @@ export async function fetchVehicles(
   try {
     data = await response.json();
   } catch {
-    throw new VehicleApiError(
-      "Araç servisinden geçersiz yanıt alındı.",
-      502,
-    );
+    throw new VehicleApiError("Araç servisinden geçersiz yanıt alındı.", 502);
   }
 
   if (
@@ -150,12 +148,97 @@ export async function fetchVehicles(
     typeof data.pagination !== "object" ||
     data.pagination === null
   ) {
-    throw new VehicleApiError(
-      "Araç listesi beklenen biçimde değil.",
-      502,
-    );
+    throw new VehicleApiError("Araç listesi beklenen biçimde değil.", 502);
   }
 
   // Bu aşamada temel yanıt yapısı kontrol ediliyor.
   return data as VehicleListResponse;
+}
+
+/**
+ * Tenant Admin oturumuyla tek bir aracın detayını getirir.
+ * JWT tarayıcıya açılmaz; istek Next.js API Route üzerinden gider.
+ */
+export async function fetchVehicleById(
+  id: string,
+  signal?: AbortSignal,
+): Promise<Vehicle> {
+  if (!id.trim()) {
+    throw new VehicleApiError("Araç kimliği belirtilmedi.", 400);
+  }
+
+  const url = `/api/tenant/vehicles/${encodeURIComponent(id)}`;
+
+  let response: Response;
+
+  try {
+    response = await fetch(url, {
+      method: "GET",
+      cache: "no-store",
+      credentials: "same-origin",
+      signal,
+    });
+  } catch (error) {
+    if (signal?.aborted) {
+      throw error;
+    }
+
+    throw new VehicleApiError(
+      "Araç servisine bağlanılamadı. Lütfen tekrar deneyin.",
+      0,
+    );
+  }
+
+  if (!response.ok) {
+    const defaultMessage =
+      response.status === 404
+        ? "Araç bulunamadı."
+        : response.status === 401
+          ? "Oturum süresi dolmuş. Lütfen tekrar giriş yapın."
+          : "Araç detayları yüklenirken bir hata oluştu.";
+
+    let message = defaultMessage;
+
+    try {
+      const data: unknown = await response.json();
+
+      if (
+        typeof data === "object" &&
+        data !== null &&
+        "message" in data &&
+        typeof data.message === "string"
+      ) {
+        message = data.message;
+      }
+    } catch {
+      // JSON olmayan hatalarda varsayılan mesajı koru.
+    }
+
+    throw new VehicleApiError(message, response.status);
+  }
+
+  let data: unknown;
+
+  try {
+    data = await response.json();
+  } catch {
+    throw new VehicleApiError("Araç servisinden geçersiz yanıt alındı.", 502);
+  }
+
+  if (
+    typeof data !== "object" ||
+    data === null ||
+    !("id" in data) ||
+    typeof data.id !== "string" ||
+    !("plate" in data) ||
+    typeof data.plate !== "string" ||
+    !("make" in data) ||
+    typeof data.make !== "string" ||
+    !("model" in data) ||
+    typeof data.model !== "string"
+  ) {
+    throw new VehicleApiError("Araç detayı beklenen biçimde değil.", 502);
+  }
+
+  return data as Vehicle;
 }

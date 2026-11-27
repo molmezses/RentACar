@@ -54,11 +54,7 @@ function CarPlaceholder() {
         fill="#EFF6FF"
       />
 
-      <path
-        d="M159 59 V92"
-        stroke="#94A3B8"
-        strokeWidth="3"
-      />
+      <path d="M159 59 V92" stroke="#94A3B8" strokeWidth="3" />
 
       <path
         d="M35 108 H56 M270 108 H286"
@@ -76,10 +72,7 @@ function CarPlaceholder() {
   );
 }
 
-export default function VehicleCard({
-  vehicle,
-  onSelect,
-}: VehicleCardProps) {
+export default function VehicleCard({ vehicle, onSelect }: VehicleCardProps) {
   const price = new Intl.NumberFormat("tr-TR", {
     style: "currency",
     currency: vehicle.currency,
@@ -87,60 +80,75 @@ export default function VehicleCard({
     maximumFractionDigits: 2,
   }).format(Number(vehicle.dailyPrice));
 
- 
-return (
-  <article className="border-b border-slate-200 bg-white px-4 py-5 last:border-b-0 sm:px-5 sm:py-6">
-    <div className="flex min-w-0 items-start gap-3 sm:gap-4">
-      {/* Küçük araç görseli */}
-      <div className="flex h-[72px] w-[72px] shrink-0 items-center justify-center overflow-hidden rounded-lg bg-[#edf3ef]">
-        <CarPlaceholder />
+  // Kartın görünümünü tek bir yerde tanımlıyoruz.
+  const cardContent = (
+    <div className="flex min-w-0 flex-col gap-4 sm:flex-row sm:items-center">
+      {/* Araç görseli ve kimlik bilgileri */}
+      <div className="flex min-w-0 flex-1 items-start gap-3 sm:items-center sm:gap-4">
+        <div className="flex h-[72px] w-[72px] shrink-0 items-center justify-center overflow-hidden rounded-xl bg-[#edf3ef]">
+          <CarPlaceholder />
+        </div>
+
+        <div className="min-w-0 space-y-1">
+          <h3 className="break-words text-sm font-semibold text-[#18352a] sm:text-base">
+            {vehicle.make} {vehicle.model}
+          </h3>
+
+          <p className="break-words text-sm text-slate-600">{vehicle.plate}</p>
+
+          <p className="text-xs leading-relaxed text-slate-500">
+            {vehicle.modelYear} · {transmissionLabels[vehicle.transmission]} ·{" "}
+            {fuelLabels[vehicle.fuelType]}
+          </p>
+        </div>
       </div>
 
-      {/* Araç bilgileri */}
-      <div className="min-w-0 flex-1 space-y-1">
-        <h3 className="text-sm font-semibold text-[#18352a] sm:text-base">
-          {vehicle.make} {vehicle.model}
-        </h3>
-
-        <p className="text-sm text-slate-500">
-          {vehicle.plate}
-        </p>
-
-        <p className="text-xs text-slate-400">
-          {vehicle.modelYear} ·{" "}
-          {transmissionLabels[vehicle.transmission]} ·{" "}
-          {fuelLabels[vehicle.fuelType]}
-        </p>
-      </div>
-
-      {/* Fiyat, durum ve detay */}
-      <div className="flex shrink-0 flex-col items-end gap-2 text-right">
-        <p className="text-sm font-semibold text-[#18352a] sm:text-base">
-          {price}
-        </p>
+      {/* Fiyat ve filo durumu */}
+      <div className="flex min-w-0 items-center justify-between gap-3 pl-[84px] sm:flex-col sm:items-end sm:justify-center sm:gap-2 sm:pl-0">
+        <div className="text-right">
+          <p className="text-sm font-bold text-[#18352a] sm:text-base">
+            {price}
+          </p>
+          <p className="text-xs text-slate-500">Günlük</p>
+        </div>
 
         <span
-          className={`rounded-full px-2.5 py-1 text-xs font-medium ${
+          className={`inline-flex shrink-0 items-center rounded-full px-2.5 py-1 text-xs font-medium ${
             vehicle.fleetStatus === "ACTIVE"
               ? "bg-emerald-50 text-emerald-700"
-              : "bg-red-50 text-red-600"
+              : "bg-slate-100 text-slate-600"
           }`}
         >
           {vehicle.fleetStatus === "ACTIVE" ? "Aktif" : "Pasif"}
         </span>
-
-        {onSelect && (
-          <button
-            type="button"
-            onClick={() => onSelect(vehicle.id)}
-            className="mt-2 inline-flex items-center gap-1 text-xs font-semibold text-[#17674c] hover:underline focus-visible:rounded-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-700 sm:text-sm"
-          >
-            Araç Detayı
-            <span aria-hidden="true">›</span>
-          </button>
-        )}
       </div>
+
+      {/* Kartın açılabilir olduğunu gösteren sade ok */}
+      {onSelect && (
+        <span
+          aria-hidden="true"
+          className="hidden shrink-0 text-xl text-slate-400 transition-colors group-hover:text-[#17674c] sm:block"
+        >
+          ›
+        </span>
+      )}
     </div>
-  </article>
-);
+  );
+
+  return (
+    <article className="border-b border-slate-200 bg-white last:border-b-0">
+      {onSelect ? (
+        <button
+          type="button"
+          onClick={() => onSelect(vehicle.id)}
+          aria-label={`${vehicle.make} ${vehicle.model}, ${vehicle.plate} aracının detaylarını görüntüle`}
+          className="group block w-full cursor-pointer px-4 py-5 text-left transition-colors duration-150 hover:bg-[#f4f8f5] focus-visible:relative focus-visible:z-10 focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-[#17674c] sm:px-5 sm:py-6"
+        >
+          {cardContent}
+        </button>
+      ) : (
+        <div className="px-4 py-5 sm:px-5 sm:py-6">{cardContent}</div>
+      )}
+    </article>
+  );
 }

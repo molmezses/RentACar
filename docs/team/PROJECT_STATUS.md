@@ -60,8 +60,8 @@ GitHub issue numarası sırasıyla; numara boşlukları PR veya aktarılmamış 
 | [#57](https://github.com/molmezses/RentACar/issues/57) | F4   | Araç oluşturma API                                                     | Done         |
 | [#58](https://github.com/molmezses/RentACar/issues/58) | F5   | Araç güncelleme API                                                    | Done         |
 | [#59](https://github.com/molmezses/RentACar/issues/59) | F6   | Vehicle CRUD izolasyonu ve E2E                                         | Done         |
-| [#60](https://github.com/molmezses/RentACar/issues/60) | F7   | Araç detay sayfası                                                     | Backlog      |
-| [#61](https://github.com/molmezses/RentACar/issues/61) | F8   | Müşteri domain tasarımı                                                | Backlog      |
+| [#60](https://github.com/molmezses/RentACar/issues/60) | F7   | Araç detay sayfası                                                     | Done         |
+| [#61](https://github.com/molmezses/RentACar/issues/61) | F8   | Müşteri domain tasarımı                                                | In Progress  |
 | [#62](https://github.com/molmezses/RentACar/issues/62) | F9   | Customer modeli ve temel API                                           | Backlog      |
 | [#63](https://github.com/molmezses/RentACar/issues/63) | G1   | Araç sayfalarını Tenant paneline taşıma                                | Done         |
 | [#64](https://github.com/molmezses/RentACar/issues/64) | G2   | Create/edit form UX                                                    | Done         |
@@ -75,7 +75,7 @@ GitHub issue numarası sırasıyla; numara boşlukları PR veya aktarılmamış 
 
 ## 4. Güncel ekip durumu
 
-| Geliştirici | Aktif issue                                                 | Durum       |
-| ----------- | ----------------------------------------------------------- | ----------- |
-| Mustafa     | F6 — #59 — Vehicle CRUD izolasyonu ve E2E güvenlik testleri | Done        |
-| Eda         | G5 — #67 — Vehicle Create/Edit API entegrasyonu             | In Progress |
+| Geliştirici | Aktif issue                                     | Durum       |
+| ----------- | ----------------------------------------------- | ----------- |
+| Mustaf      | F8 — #61 — Müşteri domain tasarımı              | In Progress |
+| Eda         | G5 — #67 — Vehicle Create/Edit API entegrasyonu | In Progress |

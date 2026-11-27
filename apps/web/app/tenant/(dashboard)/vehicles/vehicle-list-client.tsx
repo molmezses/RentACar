@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useEffect, useState } from "react";
@@ -61,8 +60,13 @@ function readUrlState() {
 
   const category = params.get("category");
   const categories = [
-    "ECONOMY", "COMPACT", "SEDAN", "SUV",
-    "LUXURY", "VAN", "OTHER",
+    "ECONOMY",
+    "COMPACT",
+    "SEDAN",
+    "SUV",
+    "LUXURY",
+    "VAN",
+    "OTHER",
   ] as const;
 
   if (categories.some((value) => value === category)) {
@@ -83,8 +87,12 @@ function readUrlState() {
 
   const fuelType = params.get("fuelType");
   const fuelTypes = [
-    "PETROL", "DIESEL", "HYBRID",
-    "ELECTRIC", "LPG", "OTHER",
+    "PETROL",
+    "DIESEL",
+    "HYBRID",
+    "ELECTRIC",
+    "LPG",
+    "OTHER",
   ] as const;
 
   if (fuelTypes.some((value) => value === fuelType)) {
@@ -103,9 +111,7 @@ function readUrlState() {
   }
 
   const rawPage = Number(params.get("page") ?? "1");
-  const page = Number.isSafeInteger(rawPage) && rawPage >= 1
-    ? rawPage
-    : 1;
+  const page = Number.isSafeInteger(rawPage) && rawPage >= 1 ? rawPage : 1;
 
   return { options, page };
 }
@@ -127,7 +133,8 @@ function writeUrlState(
   if (query.search) url.searchParams.set("search", query.search);
   if (query.category) url.searchParams.set("category", query.category);
   if (query.fleetStatus) url.searchParams.set("fleetStatus", query.fleetStatus);
-  if (query.transmission) url.searchParams.set("transmission", query.transmission);
+  if (query.transmission)
+    url.searchParams.set("transmission", query.transmission);
   if (query.fuelType) url.searchParams.set("fuelType", query.fuelType);
 
   if (options.sortBy !== "newest") {
@@ -237,10 +244,7 @@ export default function TenantVehicleListClient() {
 
   function handleOptionsChange(nextOptions: VehicleListOptions) {
     // Arama yazarken tarayıcı geçmişine her harfi eklemeyelim.
-    const mode =
-      nextOptions.search !== options.search
-        ? "replace"
-        : "push";
+    const mode = nextOptions.search !== options.search ? "replace" : "push";
 
     setOptions(nextOptions);
     setPage(1);
@@ -263,6 +267,7 @@ export default function TenantVehicleListClient() {
       onPageChange={handlePageChange}
       onOptionsChange={handleOptionsChange}
       onAdd={() => router.push("/tenant/vehicles/new")}
+      onView={(id) => router.push(`/tenant/vehicles/${encodeURIComponent(id)}`)}
     />
   );
 }

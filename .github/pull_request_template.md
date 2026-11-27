@@ -8,9 +8,9 @@ Closes #
 
 ## Changes
 
-- 
-- 
-- 
+-
+-
+-
 
 ## Testing
 
@@ -51,3 +51,27 @@ Add screenshots for visual changes, if applicable.
 - [ ] Relevant tests reviewed
 - [ ] Security implications considered
 - [ ] Documentation updated if necessary
+
+## Project Status & Team Synchronization
+
+- [ ] Latest PROJECT_STATUS.md from main has been reviewed.
+- [ ] Related issue status has been updated.
+- [ ] Current developer task information is up to date.
+- [ ] Other developer's task information has been preserved.
+- [ ] New technical decisions and known issues have been documented, if applicable.
+
+## Local Setup / Team Actions
+
+**Database migrations:** None / Details
+
+**Dependency changes:** None / Details
+
+**Environment variable changes:** None / Details
+
+**Required manual steps:** None / Details
+
+## Post-Merge Checklist
+
+- [ ] Confirm that the PR has been merged.
+- [ ] Update the related issue status to Done in PROJECT_STATUS.md and synchronize it with main.
+- [ ] Synchronize the GitHub Projects board.

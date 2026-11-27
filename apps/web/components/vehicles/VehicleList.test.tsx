@@ -124,16 +124,20 @@ describe("VehicleList", () => {
   });
 
   it("does not show unavailable actions", () => {
-    render(<VehicleList vehicles={mockVehicles} />);
+  render(<VehicleList vehicles={mockVehicles} />);
 
-    expect(
-      screen.queryByRole("button", { name: /araç ekle/i }),
-    ).not.toBeInTheDocument();
+  expect(
+    screen.queryByRole("button", { name: /araç ekle/i }),
+  ).not.toBeInTheDocument();
 
-    expect(
-      screen.queryByRole("button", { name: "Araç Detayı" }),
-    ).not.toBeInTheDocument();
-  });
+  expect(
+    screen.queryByRole("button", { name: "Araç Detayı" }),
+  ).not.toBeInTheDocument();
+
+  expect(
+    screen.queryByRole("button", { name: "Düzenle" }),
+  ).not.toBeInTheDocument();
+});
 
   it("passes the selected vehicle id to the callback", () => {
     const onView = vi.fn();
@@ -159,6 +163,35 @@ describe("VehicleList", () => {
 
     expect(onView).toHaveBeenCalledWith("mock-vehicle-1");
   });
+
+  it("passes the edited vehicle id to the onEdit callback", () => {
+  const onEdit = vi.fn();
+  const onView = vi.fn();
+
+  render(
+    <VehicleList
+      vehicles={mockVehicles}
+      onEdit={onEdit}
+      onView={onView}
+    />,
+  );
+
+  const toyotaCard = screen
+    .getByText("Toyota Corolla")
+    .closest("article");
+
+  expect(toyotaCard).not.toBeNull();
+
+  fireEvent.click(
+    within(toyotaCard!).getByRole("button", {
+      name: "Düzenle",
+    }),
+  );
+
+  expect(onEdit).toHaveBeenCalledOnce();
+  expect(onEdit).toHaveBeenCalledWith("mock-vehicle-1");
+  expect(onView).not.toHaveBeenCalled();
+});
 
   it("calls onAdd when the add vehicle button is clicked", () => {
     const onAdd = vi.fn();

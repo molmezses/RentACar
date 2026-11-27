@@ -263,6 +263,9 @@ export default function TenantVehicleListClient() {
       onPageChange={handlePageChange}
       onOptionsChange={handleOptionsChange}
       onAdd={() => router.push("/tenant/vehicles/new")}
+      onEdit={(id) =>
+        router.push(`/tenant/vehicles/${encodeURIComponent(id)}/edit`)
+      }
     />
   );
 }

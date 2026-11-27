@@ -1,21 +1,77 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 
 import VehicleForm from "@/components/vehicles/VehicleForm";
-import type { CreateVehicleInput } from "@/types/vehicle";
+import type {
+  CreateVehicleInput,
+  VehicleFormValues,
+} from "@/types/vehicle";
+
+import {
+  createVehicle,
+  VehicleApiError,
+} from "@/lib/vehicles/api";
+
+import type { VehicleValidationErrors } from "@/lib/vehicles/validation";
+import { mapVehicleApiErrors } from "@/lib/vehicles/error-utils";
 
 export default function TenantVehicleCreatePage() {
   const router = useRouter();
 
-  const [submittedVehicle, setSubmittedVehicle] =
-    useState<CreateVehicleInput | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const submittingRef = useRef(false);
 
-  function handleSubmit(vehicle: CreateVehicleInput) {
-    setSubmittedVehicle(vehicle);
+  const [submitError, setSubmitError] =
+    useState<string | null>(null);
+
+  const [serverErrors, setServerErrors] =
+  useState<VehicleValidationErrors>({});
+
+  async function handleSubmit(vehicle: CreateVehicleInput) {
+  if (submittingRef.current) {
+    return;
   }
 
+  submittingRef.current = true;
+  setIsSubmitting(true);
+  setSubmitError(null);
+  setServerErrors({});
+
+  try {
+    await createVehicle(vehicle);
+
+    router.push("/tenant/vehicles");
+  } catch (error) {
+    if (error instanceof VehicleApiError) {
+      if (error.status === 401) {
+        router.replace("/tenant/session");
+        return;
+      }
+
+      const { fieldErrors, generalError } =
+        mapVehicleApiErrors(error);
+
+      setServerErrors(fieldErrors);
+      setSubmitError(generalError);
+    } else {
+      setSubmitError(
+        "Araç oluşturulurken beklenmeyen bir hata oluştu.",
+      );
+    }
+
+    submittingRef.current = false;
+    setIsSubmitting(false);
+  }
+}
+
+function handleFieldChange(field: keyof VehicleFormValues) {
+  setServerErrors((previous) => ({
+    ...previous,
+    [field]: undefined,
+  }));
+}
   function handleCancel() {
     router.push("/tenant/vehicles");
   }
@@ -35,27 +91,23 @@ export default function TenantVehicleCreatePage() {
               </span>{" "}  işaretli alanların doldurulması zorunludur. Diğer alanlar isteğe bağlıdır. </p>
           </div>
         </div>
-        {submittedVehicle && (
+        {submitError && (
           <div
-            role="status"
-            className="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900"
+            role="alert"
+            className="rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-900"
           >
-            <p className="font-semibold">
-              Form doğrulaması başarılı!
-            </p>
-
-            <p className="mt-1">
-              {submittedVehicle.make} {submittedVehicle.model} (
-              {submittedVehicle.plate}) bilgileri doğrulandı.
-              Bu bir demo işlemidir; araç kaydedilmedi.
-            </p>
+            {submitError}
           </div>
         )}
-
         <VehicleForm
           onSubmit={handleSubmit}
           onCancel={handleCancel}
-          submitLabel="Bilgileri Kontrol Et"
+          isSubmitting={isSubmitting}
+          serverErrors={serverErrors}
+          onFieldChange={handleFieldChange}
+          submitLabel={
+            isSubmitting ? "Kaydediliyor..." : "Aracı Kaydet"
+          }
         />
       </div>
     </div>

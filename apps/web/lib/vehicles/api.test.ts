@@ -3,9 +3,13 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
   fetchVehicles,
+  fetchVehicle,
+  createVehicle,
+  updateVehicle,
   VehicleApiError,
 } from "./api";
 
+import type { CreateVehicleInput } from "@/types/vehicle";
 afterEach(() => {
   vi.unstubAllGlobals();
   vi.restoreAllMocks();
@@ -111,4 +115,309 @@ describe("fetchVehicles", () => {
       VehicleApiError,
     );
   });
+});
+
+describe("fetchVehicle", () => {
+  it("doğru endpoint üzerinden araç bilgilerini getirir", async () => {
+    const controller = new AbortController();
+
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(JSON.stringify(vehicleResponse), {
+        status: 200,
+      }),
+    );
+
+    vi.stubGlobal("fetch", fetchMock);
+
+    const result = await fetchVehicle(
+      "vehicle-1",
+      controller.signal,
+    );
+
+    expect(fetchMock).toHaveBeenCalledOnce();
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/api/tenant/vehicles/vehicle-1",
+      expect.objectContaining({
+        method: "GET",
+        credentials: "same-origin",
+        cache: "no-store",
+        signal: controller.signal,
+      }),
+    );
+
+    expect(result).toEqual(vehicleResponse);
+  });
+});
+
+describe("createVehicle", () => {
+  it("araç bilgilerini POST isteği ile gönderir", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(JSON.stringify(vehicleResponse), {
+        status: 201,
+      }),
+    );
+
+    vi.stubGlobal("fetch", fetchMock);
+
+    const result = await createVehicle(vehicleInput);
+
+    expect(fetchMock).toHaveBeenCalledOnce();
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/api/tenant/vehicles",
+      expect.objectContaining({
+        method: "POST",
+        credentials: "same-origin",
+        cache: "no-store",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(vehicleInput),
+      }),
+    );
+
+    expect(result).toEqual(vehicleResponse);
+  });
+});
+
+const vehicleInput: CreateVehicleInput = {
+  plate: "38ABC123",
+  make: "Toyota",
+  model: "Corolla",
+  modelYear: 2023,
+  category: "SEDAN",
+  transmission: "AUTOMATIC",
+  fuelType: "PETROL",
+  seatCount: 5,
+  odometerKm: 25000,
+  dailyPrice: "1500.00",
+  currency: "TRY",
+};
+
+const vehicleResponse = {
+  id: "vehicle-1",
+  ...vehicleInput,
+};
+
+
+describe("updateVehicle", () => {
+  it("değiştirilen araç bilgilerini PATCH isteği ile gönderir", async () => {
+    const updateInput = {
+      color: "Siyah",
+      dailyPrice: "2000.00",
+    };
+
+    const updatedVehicle = {
+      ...vehicleResponse,
+      ...updateInput,
+    };
+
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(JSON.stringify(updatedVehicle), {
+        status: 200,
+      }),
+    );
+
+    vi.stubGlobal("fetch", fetchMock);
+
+    const result = await updateVehicle(
+      "vehicle-1",
+      updateInput,
+    );
+
+    expect(fetchMock).toHaveBeenCalledOnce();
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/api/tenant/vehicles/vehicle-1",
+      expect.objectContaining({
+        method: "PATCH",
+        credentials: "same-origin",
+        cache: "no-store",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(updateInput),
+      }),
+    );
+
+    expect(result).toEqual(updatedVehicle);
+  });
+
+  it("null değerleri korur ve undefined alanları göndermez", async () => {
+  const fetchMock = vi.fn().mockResolvedValue(
+    new Response(JSON.stringify(vehicleResponse), {
+      status: 200,
+    }),
+  );
+
+  vi.stubGlobal("fetch", fetchMock);
+
+  await updateVehicle("vehicle-1", {
+    color: null,
+    vin: undefined,
+    hasAirConditioning: false,
+    includedMileageKm: 0,
+  });
+
+  expect(fetchMock).toHaveBeenCalledWith(
+    "/api/tenant/vehicles/vehicle-1",
+    expect.objectContaining({
+      body: JSON.stringify({
+        color: null,
+        hasAirConditioning: false,
+        includedMileageKm: 0,
+      }),
+    }),
+  );
+});
+});
+
+
+describe("Vehicle API error handling", () => {
+  it.each([400, 401, 403, 404, 409])(
+    "HTTP %i hata kodunu korur",
+    async (status) => {
+      vi.stubGlobal(
+        "fetch",
+        vi.fn().mockResolvedValue(
+          new Response(
+            JSON.stringify({ message: "API hatası" }),
+            { status },
+          ),
+        ),
+      );
+
+      await expect(
+        updateVehicle("vehicle-1", { color: "Siyah" }),
+      ).rejects.toMatchObject({
+        name: "VehicleApiError",
+        status,
+        message: "API hatası",
+        messages: ["API hatası"],
+      });
+    },
+  );
+
+
+  it("backend validasyon hata dizisini korur", async () => {
+  const messages = [
+    "plate must be a string",
+    "seatCount must be an integer number",
+  ];
+
+  vi.stubGlobal(
+    "fetch",
+    vi.fn().mockResolvedValue(
+      new Response(
+        JSON.stringify({ message: messages }),
+        { status: 400 },
+      ),
+    ),
+  );
+
+  await expect(
+    createVehicle(vehicleInput),
+  ).rejects.toMatchObject({
+    name: "VehicleApiError",
+    status: 400,
+    message: messages.join(" "),
+    messages,
+  });
+});
+
+it("bağlantı hatalarını yönetir", async () => {
+  vi.stubGlobal(
+    "fetch",
+    vi.fn().mockRejectedValue(
+      new TypeError("Failed to fetch"),
+    ),
+  );
+
+  await expect(
+    createVehicle(vehicleInput),
+  ).rejects.toMatchObject({
+    name: "VehicleApiError",
+    status: 0,
+    message:
+      "Araç servisine bağlanılamadı. Lütfen tekrar deneyin.",
+  });
+});
+
+it("JSON olmayan hata yanıtında varsayılan mesajı kullanır", async () => {
+  vi.stubGlobal(
+    "fetch",
+    vi.fn().mockResolvedValue(
+      new Response("Internal Server Error", {
+        status: 502,
+      }),
+    ),
+  );
+
+  await expect(
+    createVehicle(vehicleInput),
+  ).rejects.toMatchObject({
+    name: "VehicleApiError",
+    status: 502,
+    message: "Araç oluşturulurken bir hata oluştu.",
+  });
+});
+
+it("araç ID bilgisi olmayan başarılı yanıtı reddeder", async () => {
+  vi.stubGlobal(
+    "fetch",
+    vi.fn().mockResolvedValue(
+      new Response(
+        JSON.stringify({ make: "Toyota" }),
+        { status: 200 },
+      ),
+    ),
+  );
+
+  await expect(
+    fetchVehicle("vehicle-1"),
+  ).rejects.toMatchObject({
+    name: "VehicleApiError",
+    status: 502,
+    message: "Araç bilgileri beklenen biçimde değil.",
+  });
+});
+
+it("başarılı fakat geçersiz JSON yanıtını reddeder", async () => {
+  vi.stubGlobal(
+    "fetch",
+    vi.fn().mockResolvedValue(
+      new Response("Invalid JSON", {
+        status: 200,
+      }),
+    ),
+  );
+
+  await expect(
+    fetchVehicle("vehicle-1"),
+  ).rejects.toMatchObject({
+    name: "VehicleApiError",
+    status: 502,
+    message: "Araç servisinden geçersiz yanıt alındı.",
+  });
+});
+it("iptal edilen isteği bağlantı hatasına dönüştürmez", async () => {
+  const controller = new AbortController();
+
+  const abortError = new DOMException(
+    "Request aborted",
+    "AbortError",
+  );
+
+  vi.stubGlobal(
+    "fetch",
+    vi.fn().mockRejectedValue(abortError),
+  );
+
+  controller.abort();
+
+  await expect(
+    fetchVehicle("vehicle-1", controller.signal),
+  ).rejects.toBe(abortError);
+});
 });

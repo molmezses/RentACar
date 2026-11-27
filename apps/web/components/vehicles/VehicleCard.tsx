@@ -7,6 +7,7 @@ import type {
 type VehicleCardProps = {
   vehicle: VehicleDisplayData;
   onSelect?: (id: string) => void;
+  onEdit?: (id: string) => void;
 };
 
 const transmissionLabels: Record<Transmission, string> = {
@@ -79,6 +80,7 @@ function CarPlaceholder() {
 export default function VehicleCard({
   vehicle,
   onSelect,
+  onEdit,
 }: VehicleCardProps) {
   const price = new Intl.NumberFormat("tr-TR", {
     style: "currency",
@@ -136,6 +138,17 @@ return (
             className="mt-2 inline-flex items-center gap-1 text-xs font-semibold text-[#17674c] hover:underline focus-visible:rounded-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-700 sm:text-sm"
           >
             Araç Detayı
+            <span aria-hidden="true">›</span>
+          </button>
+        )}
+
+        {onEdit && (
+          <button
+            type="button"
+            onClick={() => onEdit(vehicle.id)}
+            className="mt-2 inline-flex items-center gap-1 text-xs font-semibold text-[#17674c] hover:underline focus-visible:rounded-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-700 sm:text-sm"
+          >
+            Düzenle
             <span aria-hidden="true">›</span>
           </button>
         )}

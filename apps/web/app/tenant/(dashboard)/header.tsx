@@ -11,6 +11,8 @@ export default function TenantHeader() {
     title = "Araç Yönetimi";
   } else if (pathname === "/tenant/vehicles/new") {
     title = "Yeni Araç Ekle";
+  } else if (/^\/tenant\/vehicles\/[^/]+\/edit$/.test(pathname)) {
+    title = "Araç Düzenle";
   }
 
   return (

@@ -40,9 +40,11 @@ export default function TenantVehicleCreatePage() {
   setServerErrors({});
 
   try {
-    await createVehicle(vehicle);
+    const createdVehicle = await createVehicle(vehicle);
 
-    router.push("/tenant/vehicles");
+    router.push(
+      `/tenant/vehicles/${encodeURIComponent(createdVehicle.id)}`,
+    );
   } catch (error) {
     if (error instanceof VehicleApiError) {
       if (error.status === 401) {

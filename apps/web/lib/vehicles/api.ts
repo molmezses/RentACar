@@ -50,7 +50,7 @@ export async function fetchVehicles(
   query: VehicleListQuery = {},
   signal?: AbortSignal,
 ): Promise<VehicleListResponse> {
-  const params = new URLSearchParams();   //Arama,filtreleme,sayfalama değerlerini url e dönüştürür
+  const params = new URLSearchParams(); //Arama,filtreleme,sayfalama değerlerini url e dönüştürür
 
   if (query.page !== undefined) {
     params.set("page", String(query.page));
@@ -139,10 +139,7 @@ export async function fetchVehicles(
   try {
     data = await response.json();
   } catch {
-    throw new VehicleApiError(
-      "Araç servisinden geçersiz yanıt alındı.",
-      502,
-    );
+    throw new VehicleApiError("Araç servisinden geçersiz yanıt alındı.", 502);
   }
 
   if (
@@ -154,16 +151,34 @@ export async function fetchVehicles(
     typeof data.pagination !== "object" ||
     data.pagination === null
   ) {
-    throw new VehicleApiError(
-      "Araç listesi beklenen biçimde değil.",
-      502,
-    );
+    throw new VehicleApiError("Araç listesi beklenen biçimde değil.", 502);
   }
 
   // Bu aşamada temel yanıt yapısı kontrol ediliyor.
   return data as VehicleListResponse;
 }
 
+/**
+ * Tenant Admin oturumuyla tek bir aracın detayını getirir.
+ * JWT tarayıcıya açılmaz; istek Next.js API Route üzerinden gider.
+ */
+export async function fetchVehicleById(
+  id: string,
+  signal?: AbortSignal,
+): Promise<Omit<Vehicle, "tenantId">> {
+  if (!id.trim()) {
+    throw new VehicleApiError("Araç kimliği belirtilmedi.", 400);
+  }
+
+  return requestVehicle(
+    `/api/tenant/vehicles/${encodeURIComponent(id)}`,
+    {
+      method: "GET",
+      signal,
+    },
+    "Araç detayları yüklenirken bir hata oluştu.",
+  );
+}
 
 //Omit yalnızca yeni fonksiyonun API dönüş tipini ifade ediyor; mevcut Vehicle tanımını veya tenant sistemini değiştirmiyor.
 //Get-Post-Patch işlemlerini ortak bir fonksiyonda topladık
@@ -192,35 +207,42 @@ async function requestVehicle(
   }
 
   if (!response.ok) {
-  let message = fallbackMessage;
-  let messages: string[] = [fallbackMessage];
+    const defaultMessage =
+      options.method === "GET" && response.status === 404
+        ? "Araç bulunamadı."
+        : options.method === "GET" && response.status === 401
+          ? "Oturum süresi dolmuş. Lütfen tekrar giriş yapın."
+          : fallbackMessage;
 
-  try {
-    const data = await response.json();
+    let message = defaultMessage;
+    let messages: string[] = [defaultMessage];
 
-    if (typeof data?.message === "string") {
-      message = data.message;
-      messages = [data.message];
-    } else if (
-      Array.isArray(data?.message) &&
-      data.message.length > 0 &&
-      data.message.every(
-        (item: unknown) => typeof item === "string",
-      )
-    ) {
-      messages = data.message;
-      message = messages.join(" ");
+    try {
+      const data = await response.json();
+
+      if (typeof data?.message === "string") {
+        message = data.message;
+        messages = [data.message];
+      } else if (
+        Array.isArray(data?.message) &&
+        data.message.length > 0 &&
+        data.message.every(
+          (item: unknown) => typeof item === "string",
+        )
+      ) {
+        messages = data.message;
+        message = messages.join(" ");
+      }
+    } catch {
+      // JSON olmayan hata yanıtında varsayılan mesaj kullanılır.
     }
-  } catch {
-    // JSON olmayan hata yanıtında varsayılan mesaj kullanılır.
-  }
 
-  throw new VehicleApiError(
-    message,
-    response.status,
-    messages,
-  );
-}
+    throw new VehicleApiError(
+      message,
+      response.status,
+      messages,
+    );
+  }
 
   let data: unknown;
 
@@ -237,10 +259,18 @@ async function requestVehicle(
     typeof data !== "object" ||
     data === null ||
     !("id" in data) ||
-    typeof data.id !== "string"
+    typeof data.id !== "string" ||
+    !("plate" in data) ||
+    typeof data.plate !== "string" ||
+    !("make" in data) ||
+    typeof data.make !== "string" ||
+    !("model" in data) ||
+    typeof data.model !== "string"
   ) {
     throw new VehicleApiError(
-      "Araç bilgileri beklenen biçimde değil.",
+      options.method === "GET"
+        ? "Araç detayı beklenen biçimde değil."
+        : "Araç bilgileri beklenen biçimde değil.",
       502,
     );
   }
@@ -253,14 +283,7 @@ export async function fetchVehicle(
   id: string,
   signal?: AbortSignal,
 ): Promise<Omit<Vehicle, "tenantId">> {
-  return requestVehicle(
-    `/api/tenant/vehicles/${encodeURIComponent(id)}`,
-    {
-      method: "GET",
-      signal,
-    },
-    "Araç bilgileri yüklenirken bir hata oluştu.",
-  );
+  return fetchVehicleById(id, signal);
 }
 
 // Yeni araç oluşturur.

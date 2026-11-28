@@ -23,7 +23,6 @@ type VehicleListProps = {
   isLoading?: boolean;
   error?: string | null;
   onView?: (id: string) => void;
-  onEdit?: (id: string) => void;
   onAdd?: () => void;
 
   serverMode?: boolean;
@@ -44,7 +43,6 @@ export default function VehicleList({
   isLoading = false,
   error = null,
   onView,
-  onEdit,
   onAdd,
   serverMode = false,
   options: controlledOptions,
@@ -378,7 +376,6 @@ export default function VehicleList({
                   key={vehicle.id}
                   vehicle={vehicle}
                   onSelect={onView}
-                  onEdit={onEdit}
                 />
               ))}
             </div>

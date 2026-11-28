@@ -140,7 +140,7 @@ export default function TenantVehicleEditPage() {
         try {
             await updateVehicle(id, updateInput);
 
-            router.push("/tenant/vehicles");
+            router.push(`/tenant/vehicles/${encodeURIComponent(id)}`);
         } catch (error) {
             if (error instanceof VehicleApiError) {
                 if (error.status === 401) {
@@ -182,7 +182,7 @@ export default function TenantVehicleEditPage() {
     }
 
     function handleCancel() {
-        router.push("/tenant/vehicles");
+        router.push(`/tenant/vehicles/${encodeURIComponent(id)}`);
     }
 
     if (isLoading) {
@@ -207,7 +207,7 @@ export default function TenantVehicleEditPage() {
 
                 <button
                     type="button"
-                    onClick={handleCancel}
+                    onClick={() => router.push("/tenant/vehicles")}
                     className="mt-4 rounded-lg bg-[#17674c] px-4 py-2 text-sm font-medium text-white"
                 >
                     Araç Listesine Dön

@@ -1,4 +1,3 @@
-
 // @vitest-environment jsdom
 
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -32,24 +31,16 @@ describe("VehicleList", () => {
   it("shows the correct fleet status", () => {
     render(<VehicleList vehicles={mockVehicles} />);
 
-    const toyotaCard = screen
-      .getByText("Toyota Corolla")
-      .closest("article");
+    const toyotaCard = screen.getByText("Toyota Corolla").closest("article");
 
-    const renaultCard = screen
-      .getByText("Renault Clio")
-      .closest("article");
+    const renaultCard = screen.getByText("Renault Clio").closest("article");
 
     expect(toyotaCard).not.toBeNull();
     expect(renaultCard).not.toBeNull();
 
-    expect(
-      within(toyotaCard!).getByText("Aktif"),
-    ).toBeInTheDocument();
+    expect(within(toyotaCard!).getByText("Aktif")).toBeInTheDocument();
 
-    expect(
-      within(renaultCard!).getByText("Pasif"),
-    ).toBeInTheDocument();
+    expect(within(renaultCard!).getByText("Pasif")).toBeInTheDocument();
   });
 
   it("filters vehicles by search", () => {
@@ -71,16 +62,15 @@ describe("VehicleList", () => {
   it("filters vehicles by fleet status", () => {
     render(<VehicleList vehicles={mockVehicles} />);
 
-    fireEvent.click(
-      screen.getByRole("button", { name: /Aktif · 1/ }),
-    );
+    fireEvent.click(screen.getByRole("button", { name: /Aktif · 1/ }));
 
     expect(screen.getByText("Toyota Corolla")).toBeInTheDocument();
     expect(screen.queryByText("Renault Clio")).not.toBeInTheDocument();
 
-    expect(
-      screen.getByRole("button", { name: /Aktif · 1/ }),
-    ).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByRole("button", { name: /Aktif · 1/ })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
   });
 
   it("shows an empty state when there are no vehicles", () => {
@@ -111,35 +101,48 @@ describe("VehicleList", () => {
   });
 
   it("shows an error state", () => {
-    render(
-      <VehicleList
-        vehicles={[]}
-        error="Araç listesi alınamadı."
-      />,
-    );
+    render(<VehicleList vehicles={[]} error="Araç listesi alınamadı." />);
 
-    expect(
-      screen.getByText("Araç listesi alınamadı."),
-    ).toBeInTheDocument();
+    expect(screen.getByText("Araç listesi alınamadı.")).toBeInTheDocument();
   });
 
   it("does not show unavailable actions", () => {
-  render(<VehicleList vehicles={mockVehicles} />);
+    render(<VehicleList vehicles={mockVehicles} />);
 
-  expect(
-    screen.queryByRole("button", { name: /araç ekle/i }),
-  ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: /araç ekle/i }),
+    ).not.toBeInTheDocument();
 
-  expect(
-    screen.queryByRole("button", { name: "Araç Detayı" }),
-  ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", {
+        name: /detaylarını görüntüle/i,
+      }),
+    ).not.toBeInTheDocument();
 
-  expect(
-    screen.queryByRole("button", { name: "Düzenle" }),
-  ).not.toBeInTheDocument();
-});
+    expect(
+      screen.queryByRole("button", { name: "Düzenle" }),
+    ).not.toBeInTheDocument();
+  });
 
   it("passes the selected vehicle id to the callback", () => {
+    const onView = vi.fn();
+
+    render(<VehicleList vehicles={mockVehicles} onView={onView} />);
+
+    const toyotaCard = screen.getByText("Toyota Corolla").closest("article");
+
+    expect(toyotaCard).not.toBeNull();
+
+    fireEvent.click(
+      within(toyotaCard!).getByRole("button", {
+        name: /Toyota Corolla.*38 ABC 123.*detaylarını görüntüle/i,
+      }),
+    );
+
+    expect(onView).toHaveBeenCalledWith("mock-vehicle-1");
+  });
+
+  it("does not show edit actions on vehicle cards", () => {
     const onView = vi.fn();
 
     render(
@@ -149,198 +152,137 @@ describe("VehicleList", () => {
       />,
     );
 
-    const toyotaCard = screen
-      .getByText("Toyota Corolla")
-      .closest("article");
-
-    expect(toyotaCard).not.toBeNull();
-
-    fireEvent.click(
-      within(toyotaCard!).getByRole("button", {
-        name: "Araç Detayı",
-      }),
-    );
-
-    expect(onView).toHaveBeenCalledWith("mock-vehicle-1");
+    expect(
+      screen.queryByRole("button", { name: /düzenle/i }),
+    ).not.toBeInTheDocument();
   });
-
-  it("passes the edited vehicle id to the onEdit callback", () => {
-  const onEdit = vi.fn();
-  const onView = vi.fn();
-
-  render(
-    <VehicleList
-      vehicles={mockVehicles}
-      onEdit={onEdit}
-      onView={onView}
-    />,
-  );
-
-  const toyotaCard = screen
-    .getByText("Toyota Corolla")
-    .closest("article");
-
-  expect(toyotaCard).not.toBeNull();
-
-  fireEvent.click(
-    within(toyotaCard!).getByRole("button", {
-      name: "Düzenle",
-    }),
-  );
-
-  expect(onEdit).toHaveBeenCalledOnce();
-  expect(onEdit).toHaveBeenCalledWith("mock-vehicle-1");
-  expect(onView).not.toHaveBeenCalled();
-});
 
   it("calls onAdd when the add vehicle button is clicked", () => {
     const onAdd = vi.fn();
 
-    render(
-      <VehicleList
-        vehicles={mockVehicles}
-        onAdd={onAdd}
-      />,
-    );
+    render(<VehicleList vehicles={mockVehicles} onAdd={onAdd} />);
 
-    fireEvent.click(
-      screen.getByRole("button", { name: /araç ekle/i }),
-    );
+    fireEvent.click(screen.getByRole("button", { name: /araç ekle/i }));
 
     expect(onAdd).toHaveBeenCalledOnce();
   });
 
+  it("does not filter API results locally in server mode", () => {
+    render(
+      <VehicleList
+        vehicles={mockVehicles}
+        serverMode
+        options={{
+          ...defaultVehicleListOptions,
+          search: "Ferrari",
+        }}
+      />,
+    );
 
-it("does not filter API results locally in server mode", () => {
-  render(
-    <VehicleList
-      vehicles={mockVehicles}
-      serverMode
-      options={{
-        ...defaultVehicleListOptions,
-        search: "Ferrari",
-      }}
-    />,
-  );
-
-  // API sonuçlarını frontend tekrar filtrelememeli.
-  expect(screen.getByText("Toyota Corolla")).toBeInTheDocument();
-  expect(screen.getByText("Renault Clio")).toBeInTheDocument();
-});
-
-it("notifies the parent when a filter changes in server mode", () => {
-  const onOptionsChange = vi.fn();
-
-  render(
-    <VehicleList
-      vehicles={[]}
-      serverMode
-      options={{ ...defaultVehicleListOptions }}
-      onOptionsChange={onOptionsChange}
-    />,
-  );
-
-  fireEvent.change(
-    screen.getByRole("searchbox", {
-      name: "Araç, plaka veya model ara",
-    }),
-    {
-      target: { value: "Toyota" },
-    },
-  );
-
-  expect(onOptionsChange).toHaveBeenCalledWith({
-    ...defaultVehicleListOptions,
-    search: "Toyota",
+    // API sonuçlarını frontend tekrar filtrelememeli.
+    expect(screen.getByText("Toyota Corolla")).toBeInTheDocument();
+    expect(screen.getByText("Renault Clio")).toBeInTheDocument();
   });
-});
 
-it("uses API pagination to navigate between pages", () => {
-  const onPageChange = vi.fn();
+  it("notifies the parent when a filter changes in server mode", () => {
+    const onOptionsChange = vi.fn();
 
-  render(
-    <VehicleList
-      vehicles={mockVehicles}
-      serverMode
-      options={{ ...defaultVehicleListOptions }}
-      pagination={{
-        page: 1,
-        limit: 20,
-        total: 35,
-        totalPages: 2,
-      }}
-      onPageChange={onPageChange}
-    />,
-  );
+    render(
+      <VehicleList
+        vehicles={[]}
+        serverMode
+        options={{ ...defaultVehicleListOptions }}
+        onOptionsChange={onOptionsChange}
+      />,
+    );
 
-  // İlk sayfadayız.
-  expect(
-    screen.getByRole("button", { name: "Önceki" }),
-  ).toBeDisabled();
+    fireEvent.change(
+      screen.getByRole("searchbox", {
+        name: "Araç, plaka veya model ara",
+      }),
+      {
+        target: { value: "Toyota" },
+      },
+    );
 
-  // Sayfa numaraları görünmeli.
-  expect(
-    screen.getByRole("button", { name: "Sayfa 1" }),
-  ).toHaveAttribute("aria-current", "page");
+    expect(onOptionsChange).toHaveBeenCalledWith({
+      ...defaultVehicleListOptions,
+      search: "Toyota",
+    });
+  });
 
-  expect(
-    screen.getByRole("button", { name: "Sayfa 2" }),
-  ).toBeEnabled();
+  it("uses API pagination to navigate between pages", () => {
+    const onPageChange = vi.fn();
 
-  // Sonraki butonu ikinci sayfaya geçmeli.
-  fireEvent.click(
-    screen.getByRole("button", { name: "Sonraki" }),
-  );
+    render(
+      <VehicleList
+        vehicles={mockVehicles}
+        serverMode
+        options={{ ...defaultVehicleListOptions }}
+        pagination={{
+          page: 1,
+          limit: 20,
+          total: 35,
+          totalPages: 2,
+        }}
+        onPageChange={onPageChange}
+      />,
+    );
 
-  expect(onPageChange).toHaveBeenCalledWith(2);
+    // İlk sayfadayız.
+    expect(screen.getByRole("button", { name: "Önceki" })).toBeDisabled();
 
-  // Kullanıcı doğrudan ikinci sayfaya da gidebilmeli.
-  fireEvent.click(
-    screen.getByRole("button", { name: "Sayfa 2" }),
-  );
+    // Sayfa numaraları görünmeli.
+    expect(screen.getByRole("button", { name: "Sayfa 1" })).toHaveAttribute(
+      "aria-current",
+      "page",
+    );
 
-  expect(onPageChange).toHaveBeenLastCalledWith(2);
+    expect(screen.getByRole("button", { name: "Sayfa 2" })).toBeEnabled();
 
-  // Eski tasarımdaki toplam araç metni artık bulunmamalı.
-  expect(screen.queryByText(/Toplam 35 araç/)).not.toBeInTheDocument();
-});
+    // Sonraki butonu ikinci sayfaya geçmeli.
+    fireEvent.click(screen.getByRole("button", { name: "Sonraki" }));
 
+    expect(onPageChange).toHaveBeenCalledWith(2);
 
-it("disables the next button on the last page", () => {
-  const onPageChange = vi.fn();
+    // Kullanıcı doğrudan ikinci sayfaya da gidebilmeli.
+    fireEvent.click(screen.getByRole("button", { name: "Sayfa 2" }));
 
-  render(
-    <VehicleList
-      vehicles={mockVehicles}
-      serverMode
-      options={{ ...defaultVehicleListOptions }}
-      pagination={{
-        page: 2,
-        limit: 20,
-        total: 35,
-        totalPages: 2,
-      }}
-      onPageChange={onPageChange}
-    />,
-  );
+    expect(onPageChange).toHaveBeenLastCalledWith(2);
 
-  expect(
-    screen.getByRole("button", { name: "Sonraki" }),
-  ).toBeDisabled();
+    // Eski tasarımdaki toplam araç metni artık bulunmamalı.
+    expect(screen.queryByText(/Toplam 35 araç/)).not.toBeInTheDocument();
+  });
 
-  expect(
-    screen.getByRole("button", { name: "Önceki" }),
-  ).toBeEnabled();
+  it("disables the next button on the last page", () => {
+    const onPageChange = vi.fn();
 
-  expect(
-    screen.getByRole("button", { name: "Sayfa 2" }),
-  ).toHaveAttribute("aria-current", "page");
+    render(
+      <VehicleList
+        vehicles={mockVehicles}
+        serverMode
+        options={{ ...defaultVehicleListOptions }}
+        pagination={{
+          page: 2,
+          limit: 20,
+          total: 35,
+          totalPages: 2,
+        }}
+        onPageChange={onPageChange}
+      />,
+    );
 
-  fireEvent.click(
-    screen.getByRole("button", { name: "Önceki" }),
-  );
+    expect(screen.getByRole("button", { name: "Sonraki" })).toBeDisabled();
 
-  expect(onPageChange).toHaveBeenCalledWith(1);
-});
+    expect(screen.getByRole("button", { name: "Önceki" })).toBeEnabled();
 
+    expect(screen.getByRole("button", { name: "Sayfa 2" })).toHaveAttribute(
+      "aria-current",
+      "page",
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Önceki" }));
+
+    expect(onPageChange).toHaveBeenCalledWith(1);
+  });
 });

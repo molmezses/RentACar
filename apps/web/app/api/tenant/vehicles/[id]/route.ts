@@ -5,7 +5,10 @@ type VehicleRouteContext = {
   params: Promise<{ id: string }>;
 };
 
-function errorResponse(message: string | string[],status: number,) {
+function errorResponse(
+  message: string | string[],
+  status: number,
+) {
   return NextResponse.json(
     { message },
     {
@@ -15,15 +18,19 @@ function errorResponse(message: string | string[],status: number,) {
   );
 }
 
-// Düzenleme formu için mevcut araç bilgilerini getirir.
+// Araç detay ve düzenleme sayfaları için araç bilgilerini getirir.
 export async function GET(
   _request: Request,
   { params }: VehicleRouteContext,
 ) {
   const { id } = await params;
 
-  const cookieStore = await cookies();
+  if (!id.trim() || id.length > 128) {
+    return errorResponse("Geçersiz araç kimliği.", 400);
+  }
 
+  // JWT'yi yalnızca Next.js sunucusu okuyabilir.
+  const cookieStore = await cookies();
   const accessToken = cookieStore.get(
     "rentacar_tenant_access",
   )?.value;
@@ -36,8 +43,7 @@ export async function GET(
   }
 
   const apiUrl =
-    process.env.API_INTERNAL_URL ??
-    "http://localhost:3001";
+    process.env.API_INTERNAL_URL ?? "http://localhost:3001";
 
   const backendUrl = new URL(
     `/tenant/vehicles/${encodeURIComponent(id)}`,
@@ -71,7 +77,7 @@ export async function GET(
 
   if (response.status === 403) {
     return errorResponse(
-      "Araç bilgilerini görüntüleme yetkiniz bulunmuyor.",
+      "Bu aracı görüntüleme yetkiniz bulunmuyor.",
       403,
     );
   }
@@ -82,7 +88,7 @@ export async function GET(
 
   if (!response.ok) {
     return errorResponse(
-      "Araç bilgileri yüklenirken bir hata oluştu.",
+      "Araç detayları yüklenirken bir hata oluştu.",
       502,
     );
   }
@@ -98,14 +104,21 @@ export async function GET(
     );
   }
 
+  // Beklenen temel araç detay alanlarını doğrula.
   if (
     typeof data !== "object" ||
     data === null ||
     !("id" in data) ||
-    typeof data.id !== "string"
+    typeof data.id !== "string" ||
+    !("plate" in data) ||
+    typeof data.plate !== "string" ||
+    !("make" in data) ||
+    typeof data.make !== "string" ||
+    !("model" in data) ||
+    typeof data.model !== "string"
   ) {
     return errorResponse(
-      "Araç bilgileri beklenen biçimde değil.",
+      "Araç detayı beklenen biçimde değil.",
       502,
     );
   }
@@ -122,8 +135,11 @@ export async function PATCH(
 ) {
   const { id } = await params;
 
-  const cookieStore = await cookies();
+  if (!id.trim() || id.length > 128) {
+    return errorResponse("Geçersiz araç kimliği.", 400);
+  }
 
+  const cookieStore = await cookies();
   const accessToken = cookieStore.get(
     "rentacar_tenant_access",
   )?.value;
@@ -158,9 +174,8 @@ export async function PATCH(
     );
   }
 
-    const apiUrl =
-    process.env.API_INTERNAL_URL ??
-    "http://localhost:3001";
+  const apiUrl =
+    process.env.API_INTERNAL_URL ?? "http://localhost:3001";
 
   const backendUrl = new URL(
     `/tenant/vehicles/${encodeURIComponent(id)}`,
@@ -186,7 +201,8 @@ export async function PATCH(
       502,
     );
   }
-    if (response.status === 401) {
+
+  if (response.status === 401) {
     return errorResponse(
       "Oturum süresi dolmuş. Lütfen tekrar giriş yapın.",
       401,
@@ -217,6 +233,7 @@ export async function PATCH(
         message = data.message;
       } else if (
         Array.isArray(data?.message) &&
+        data.message.length > 0 &&
         data.message.every(
           (item: unknown) => typeof item === "string",
         )
@@ -236,7 +253,8 @@ export async function PATCH(
       502,
     );
   }
-    let data: unknown;
+
+  let data: unknown;
 
   try {
     data = await response.json();
@@ -251,7 +269,13 @@ export async function PATCH(
     typeof data !== "object" ||
     data === null ||
     !("id" in data) ||
-    typeof data.id !== "string"
+    typeof data.id !== "string" ||
+    !("plate" in data) ||
+    typeof data.plate !== "string" ||
+    !("make" in data) ||
+    typeof data.make !== "string" ||
+    !("model" in data) ||
+    typeof data.model !== "string"
   ) {
     return errorResponse(
       "Güncellenen araç bilgileri beklenen biçimde değil.",

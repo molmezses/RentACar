@@ -114,7 +114,13 @@ describe("VehicleList", () => {
     ).not.toBeInTheDocument();
 
     expect(
-      screen.queryByRole("button", { name: "Araç Detayı" }),
+      screen.queryByRole("button", {
+        name: /detaylarını görüntüle/i,
+      }),
+    ).not.toBeInTheDocument();
+
+    expect(
+      screen.queryByRole("button", { name: "Düzenle" }),
     ).not.toBeInTheDocument();
   });
 
@@ -129,11 +135,26 @@ describe("VehicleList", () => {
 
     fireEvent.click(
       within(toyotaCard!).getByRole("button", {
-        nname: /Toyota Corolla.*38 ABC 123.*detaylarını görüntüle/i,
+        name: /Toyota Corolla.*38 ABC 123.*detaylarını görüntüle/i,
       }),
     );
 
     expect(onView).toHaveBeenCalledWith("mock-vehicle-1");
+  });
+
+  it("does not show edit actions on vehicle cards", () => {
+    const onView = vi.fn();
+
+    render(
+      <VehicleList
+        vehicles={mockVehicles}
+        onView={onView}
+      />,
+    );
+
+    expect(
+      screen.queryByRole("button", { name: /düzenle/i }),
+    ).not.toBeInTheDocument();
   });
 
   it("calls onAdd when the add vehicle button is clicked", () => {

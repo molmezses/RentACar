@@ -7,6 +7,7 @@ import { useEffect, useState, type ReactNode } from "react";
 import { fetchVehicleById, VehicleApiError } from "@/lib/vehicles/api";
 import VehicleStatusBadge from "@/components/vehicles/VehicleStatusBadge";
 import type { Vehicle } from "@/types/vehicle";
+type VehicleDetailData = Omit<Vehicle, "tenantId">;
 
 const categories: Record<Vehicle["category"], string> = {
   ECONOMY: "Ekonomi",
@@ -104,24 +105,24 @@ function Section({
   );
 }
 
-function VehicleOverview({ vehicle }: { vehicle: Vehicle }) {
+function VehicleOverview({ vehicle }: { vehicle: VehicleDetailData }) {
   return (
-    <header className="flex min-w-0 flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-      <div className="min-w-0">
-        <p className="mb-2 text-xs font-medium text-slate-500">
-          Araç Filosu / Araç Detayı
-        </p>
+    <header className="min-w-0">
+      <p className="mb-2 text-xs font-medium text-slate-500">
+        Araç Filosu / Araç Detayı
+      </p>
+
+      <div className="flex flex-wrap items-center gap-3">
         <h1 className="break-words text-2xl font-bold tracking-tight text-[#13241f] sm:text-3xl">
           {vehicle.make} {vehicle.model}
         </h1>
-        <p className="mt-2 text-sm text-slate-500">
-          {vehicle.modelYear} · {categories[vehicle.category]} · {vehicle.plate}
-        </p>
-      </div>
 
-      <div className="self-start">
         <VehicleStatusBadge status={vehicle.fleetStatus} />
       </div>
+
+      <p className="mt-2 text-sm text-slate-500">
+        {vehicle.modelYear} · {categories[vehicle.category]} · {vehicle.plate}
+      </p>
     </header>
   );
 }
@@ -294,11 +295,10 @@ function VehicleGalleryPlaceholder() {
             onClick={() => setActiveImage(index)}
             aria-label={`${index + 1}. görseli göster`}
             aria-pressed={activeImage === index}
-            className={`min-w-0 overflow-hidden rounded-lg border-2 p-1 transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#17674c] sm:p-2 ${
-              activeImage === index
+            className={`min-w-0 overflow-hidden rounded-lg border-2 p-1 transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#17674c] sm:p-2 ${activeImage === index
                 ? "border-[#17674c] bg-[#eef5ef]"
                 : "border-slate-200 bg-[#f8faf9] hover:border-slate-400"
-            }`}
+              }`}
           >
             <div className="flex h-16 items-center justify-center sm:h-24">
               <VehicleIllustration view={view} />
@@ -314,7 +314,7 @@ function VehicleGalleryPlaceholder() {
   );
 }
 
-function VehicleDetail({ vehicle }: { vehicle: Vehicle }) {
+function VehicleDetail({ vehicle }: { vehicle: VehicleDetailData }) {
   return (
     <div className="space-y-6">
       <VehicleOverview vehicle={vehicle} />
@@ -433,7 +433,7 @@ function VehicleDetail({ vehicle }: { vehicle: Vehicle }) {
 export default function TenantVehicleDetailPage() {
   const { id } = useParams<{ id: string }>();
 
-  const [vehicle, setVehicle] = useState<Vehicle | null>(null);
+  const [vehicle, setVehicle] = useState<VehicleDetailData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [errorStatus, setErrorStatus] = useState<number | null>(null);
@@ -471,16 +471,58 @@ export default function TenantVehicleDetailPage() {
 
   return (
     <main className="mx-auto w-full min-w-0 max-w-7xl space-y-6 px-4 py-6 sm:px-6 lg:px-8">
-      <nav aria-label="Sayfa yolu">
+      <nav
+        aria-label="Sayfa yolu"
+        className="flex flex-wrap items-center justify-between gap-3"
+      >
         <Link
           href="/tenant/vehicles"
-          className="inline-flex items-center gap-2 text-sm font-medium text-[#17674c] hover:underline"
+          className="inline-flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-slate-600 bg-white border border-slate-200 transition-colors hover:bg-slate-200/70 hover:text-slate-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-900"
         >
-          <span aria-hidden="true">←</span>
-          Araç listesine dön
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.8"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            aria-hidden="true"
+          >
+            <path d="m12 19-7-7 7-7" />
+            <path d="M19 12H5" />
+          </svg>
+          <span>Araç Listesine Dön</span>
         </Link>
-      </nav>
 
+        {vehicle && !isLoading && !error && (
+          <Link
+            href={`/tenant/vehicles/${encodeURIComponent(vehicle.id)}/edit`}
+            className="inline-flex items-center justify-center gap-2 rounded-lg bg-[#17674c] px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-[#12543d] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#17674c]"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.8"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden="true"
+            >
+              <path d="M12 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+              <path d="M16 5l3 3" />
+              <path d="M18 3a2.12 2.12 0 0 1 3 3L10 17l-4 1 1-4Z" />
+            </svg>
+            <span>Düzenle</span>
+          </Link>
+        )}
+
+      </nav>
       {isLoading ? (
         <div role="status" className="space-y-5">
           <div className="h-44 animate-pulse rounded-2xl bg-slate-200" />

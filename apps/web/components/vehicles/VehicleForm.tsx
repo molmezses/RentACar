@@ -10,6 +10,7 @@ import {
   type VehicleValidationErrors,
 } from "@/lib/vehicles/validation";
 import type { CreateVehicleInput, VehicleFormValues } from "@/types/vehicle";
+import { formValuesToCreateInput } from "@/lib/vehicles/form-utils";
 
 type VehicleFormProps = {
   initialValues?: Partial<VehicleFormValues>;
@@ -17,6 +18,8 @@ type VehicleFormProps = {
   onCancel?: () => void;
   isSubmitting?: boolean;
   submitLabel?: string;
+  serverErrors?: VehicleValidationErrors;
+  onFieldChange?: (field: keyof VehicleFormValues) => void;
 };
 
 const emptyValues: VehicleFormValues = {
@@ -153,14 +156,6 @@ const selectOptions = {
   ],
 } as const;
 
-function optionalText(value: string): string | null {
-  return value.trim() || null;
-}
-
-function optionalNumber(value: string): number | null {
-  return value.trim() ? Number(value) : null;
-}
-
 const fieldControlClass =
   "h-9 w-full min-w-0 rounded-md border border-slate-300 bg-white px-3 text-sm text-slate-900 outline-none transition-colors placeholder:text-slate-400 focus:border-[#17674c] focus:ring-2 focus:ring-emerald-100";
 
@@ -170,6 +165,8 @@ export default function VehicleForm({
   onCancel,
   isSubmitting = false,
   submitLabel = "Aracı Kaydet",
+  serverErrors = {},
+  onFieldChange,
 }: VehicleFormProps) {
   const [values, setValues] = useState<VehicleFormValues>({
     ...emptyValues,
@@ -177,12 +174,33 @@ export default function VehicleForm({
   });
   const [errors, setErrors] = useState<VehicleValidationErrors>({});
 
+  const fieldErrors = { ...serverErrors };
+
+  for (const field of Object.keys(errors) as Array<
+    keyof VehicleFormValues
+  >) {
+    const message = errors[field];
+
+    if (message) {
+      fieldErrors[field] = message;
+    }
+  }
+
   function updateField<K extends keyof VehicleFormValues>(
     field: K,
     value: VehicleFormValues[K],
   ) {
-    setValues((previous) => ({ ...previous, [field]: value }));
-    setErrors((previous) => ({ ...previous, [field]: undefined }));
+    setValues((previous) => ({
+      ...previous,
+      [field]: value,
+    }));
+
+    setErrors((previous) => ({
+      ...previous,
+      [field]: undefined,
+    }));
+
+    onFieldChange?.(field);
   }
 
   function handleCancel() {
@@ -203,6 +221,7 @@ export default function VehicleForm({
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (isSubmitting) return;
     const validationErrors = validateVehicleForm(values);
     setErrors(validationErrors);
 
@@ -220,30 +239,7 @@ export default function VehicleForm({
       return;
     }
 
-    const vehicle: CreateVehicleInput = {
-      plate: values.plate.trim().toUpperCase(),
-      make: values.make.trim(),
-      model: values.model.trim(),
-      modelYear: Number(values.modelYear),
-      category: values.category as CreateVehicleInput["category"],
-      transmission: values.transmission as CreateVehicleInput["transmission"],
-      fuelType: values.fuelType as CreateVehicleInput["fuelType"],
-      seatCount: Number(values.seatCount),
-      odometerKm: Number(values.odometerKm),
-      dailyPrice: values.dailyPrice.trim(),
-      currency: values.currency as CreateVehicleInput["currency"],
-      vin: optionalText(values.vin),
-      internalCode: optionalText(values.internalCode),
-      trim: optionalText(values.trim),
-      color: optionalText(values.color),
-      doorCount: optionalNumber(values.doorCount),
-      hasAirConditioning: values.hasAirConditioning,
-      currentLocationLabel: optionalText(values.currentLocationLabel),
-      notes: optionalText(values.notes),
-      depositAmount: optionalText(values.depositAmount),
-      includedMileageKm: optionalNumber(values.includedMileageKm),
-      extraKmPrice: optionalText(values.extraKmPrice),
-    };
+    const vehicle = formValuesToCreateInput(values);
 
     onSubmit(vehicle);
   }
@@ -263,7 +259,7 @@ export default function VehicleForm({
           {section.fields.map((field) => {
             const inputId = `vehicle-${field.name}`;
             const errorId = `vehicle-error-${field.name}`;
-            const error = errors[field.name];
+            const error = fieldErrors[field.name];
             const suffix =
               field.name === "odometerKm" || field.name === "includedMileageKm"
                 ? "km"
@@ -288,6 +284,7 @@ export default function VehicleForm({
                     id={inputId}
                     name={field.name}
                     required={field.required}
+                    disabled={isSubmitting}
                     value={values[field.name]}
                     aria-invalid={Boolean(error)}
                     aria-describedby={error ? errorId : undefined}
@@ -310,6 +307,7 @@ export default function VehicleForm({
                       id={inputId}
                       name={field.name}
                       type="text"
+                      disabled={isSubmitting}
                       inputMode={field.inputMode ?? "text"}
                       placeholder={field.placeholder}
                       required={field.required}
@@ -351,6 +349,9 @@ export default function VehicleForm({
               <select
                 id="vehicle-air-conditioning"
                 name="hasAirConditioning"
+                disabled={isSubmitting}
+                aria-invalid={Boolean(fieldErrors.hasAirConditioning)}
+                aria-describedby={fieldErrors.hasAirConditioning ? "vehicle-error-hasAirConditioning" : undefined}
                 value={values.hasAirConditioning === null ? "" : values.hasAirConditioning ? "true" : "false"}
                 onChange={(event) => {
                   const selected = event.target.value;
@@ -362,6 +363,11 @@ export default function VehicleForm({
                 <option value="true">Klima var</option>
                 <option value="false">Klima yok</option>
               </select>
+              {fieldErrors.hasAirConditioning && (
+                <p id="vehicle-error-hasAirConditioning" role="alert" className="text-xs font-medium text-rose-600 lg:col-start-2">
+                  {fieldErrors.hasAirConditioning}
+                </p>
+              )}
             </div>
           )}
 
@@ -373,17 +379,18 @@ export default function VehicleForm({
               <textarea
                 id="vehicle-notes"
                 name="notes"
+                disabled={isSubmitting}
                 rows={4}
                 placeholder="Araçla ilgili ek notlar (isteğe bağlı)"
                 value={values.notes}
-                aria-invalid={Boolean(errors.notes)}
-                aria-describedby={errors.notes ? "vehicle-error-notes" : undefined}
+                aria-invalid={Boolean(fieldErrors.notes)}
+                aria-describedby={fieldErrors.notes ? "vehicle-error-notes" : undefined}
                 onChange={(event) => updateField("notes", event.target.value)}
                 className="min-h-20 w-full min-w-0 resize-y rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 outline-none transition-colors placeholder:text-slate-400 focus:border-[#17674c] focus:ring-2 focus:ring-emerald-100"
               />
-              {errors.notes && (
+              {fieldErrors.notes && (
                 <p id="vehicle-error-notes" role="alert" className="text-xs font-medium text-rose-600 lg:col-start-2">
-                  {errors.notes}
+                  {fieldErrors.notes}
                 </p>
               )}
             </div>

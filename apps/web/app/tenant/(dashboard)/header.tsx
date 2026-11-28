@@ -7,12 +7,15 @@ export default function TenantHeader() {
 
   let title = "Genel Bakış";
 
-  if (pathname === "/tenant/vehicles") {
-    title = "Araç Yönetimi";
-  } else if (pathname === "/tenant/vehicles/new") {
-    title = "Yeni Araç Ekle";
-  }
-
+ if (pathname === "/tenant/vehicles") {
+  title = "Araç Yönetimi";
+} else if (pathname === "/tenant/vehicles/new") {
+  title = "Yeni Araç Ekle";
+} else if (/^\/tenant\/vehicles\/[^/]+\/edit$/.test(pathname)) {
+  title = "Araç Düzenle";
+} else if (/^\/tenant\/vehicles\/[^/]+$/.test(pathname)) {
+  title = "Araç Detayı";
+}
   return (
     <header className="flex min-h-20 items-center justify-between border-b border-slate-200 bg-white px-6 lg:px-10">
       <div>

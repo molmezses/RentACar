@@ -1,6 +1,6 @@
 # RentACar — Project Status
 
-**Durum tarihi:** 26 Kasım 2026 · **Aktif seriler:** F / G
+**Durum tarihi:** 28 Kasım 2026 · **Aktif seriler:** F / G
 Bu dosya günlük ekip takibi içindir. Ürün ve teknoloji bilgileri [README](../../README.md), ayrıntılı görevler [ISSUE_HISTORY](ISSUE_HISTORY.md) dosyasındadır. Güncel `main`, GitHub Projects ve PR kayıtları doğrulama kaynağıdır.
 
 ## 1. Zorunlu ekip kuralları
@@ -67,7 +67,7 @@ GitHub issue numarası sırasıyla; numara boşlukları PR veya aktarılmamış 
 | [#64](https://github.com/molmezses/RentACar/issues/64) | G2   | Create/edit form UX                                                    | Done         |
 | [#65](https://github.com/molmezses/RentACar/issues/65) | G3   | Gerçek listeleme API entegrasyonu                                      | Done         |
 | [#66](https://github.com/molmezses/RentACar/issues/66) | G4   | Aktif/pasif API                                                        | Done         |
-| [#67](https://github.com/molmezses/RentACar/issues/67) | G5   | Gerçek create/edit entegrasyonu                                        | In Progress  |
+| [#67](https://github.com/molmezses/RentACar/issues/67) | G5   | Gerçek create/edit entegrasyonu                                        | In Review    |
 | [#68](https://github.com/molmezses/RentACar/issues/68) | G6   | Aktif/pasif UI                                                         | Backlog      |
 | [#69](https://github.com/molmezses/RentACar/issues/69) | G7   | Filo özeti API                                                         | Backlog      |
 | [#70](https://github.com/molmezses/RentACar/issues/70) | G8   | Dashboard filo özeti                                                   | Backlog      |
@@ -77,5 +77,5 @@ GitHub issue numarası sırasıyla; numara boşlukları PR veya aktarılmamış 
 
 | Geliştirici | Aktif issue                                     | Durum       |
 | ----------- | ----------------------------------------------- | ----------- |
-| Mustaf      | F8 — #61 — Müşteri domain tasarımı              | In Progress |
-| Eda         | G5 — #67 — Vehicle Create/Edit API entegrasyonu | In Progress |
+| Mustafa     | F8 — #61 — Müşteri domain tasarımı              | In Progress |
+| Eda         | G5 — #67 — Vehicle Create/Edit API entegrasyonu | In Review   |

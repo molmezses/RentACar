@@ -3,8 +3,10 @@ import type {
   FleetStatus,
   Transmission,
   FuelType,
-  Vehicle,
   VehicleDisplayData,
+  Vehicle,
+  CreateVehicleInput,
+  UpdateVehicleInput,
 } from "@/types/vehicle";
 
 //Backenda gönderilebilecek filtreleri Typescripte tanımladık
@@ -36,6 +38,7 @@ export class VehicleApiError extends Error {
   constructor(
     message: string,
     public readonly status: number,
+    public readonly messages: readonly string[] = [message],
   ) {
     super(message);
     this.name = "VehicleApiError";
@@ -162,24 +165,38 @@ export async function fetchVehicles(
 export async function fetchVehicleById(
   id: string,
   signal?: AbortSignal,
-): Promise<Vehicle> {
+): Promise<Omit<Vehicle, "tenantId">> {
   if (!id.trim()) {
     throw new VehicleApiError("Araç kimliği belirtilmedi.", 400);
   }
 
-  const url = `/api/tenant/vehicles/${encodeURIComponent(id)}`;
+  return requestVehicle(
+    `/api/tenant/vehicles/${encodeURIComponent(id)}`,
+    {
+      method: "GET",
+      signal,
+    },
+    "Araç detayları yüklenirken bir hata oluştu.",
+  );
+}
 
+//Omit yalnızca yeni fonksiyonun API dönüş tipini ifade ediyor; mevcut Vehicle tanımını veya tenant sistemini değiştirmiyor.
+//Get-Post-Patch işlemlerini ortak bir fonksiyonda topladık
+async function requestVehicle(
+  url: string,
+  options: RequestInit,
+  fallbackMessage: string,
+): Promise<Omit<Vehicle, "tenantId">> {
   let response: Response;
 
   try {
     response = await fetch(url, {
-      method: "GET",
+      ...options,
       cache: "no-store",
       credentials: "same-origin",
-      signal,
     });
   } catch (error) {
-    if (signal?.aborted) {
+    if (options.signal?.aborted) {
       throw error;
     }
 
@@ -191,30 +208,40 @@ export async function fetchVehicleById(
 
   if (!response.ok) {
     const defaultMessage =
-      response.status === 404
+      options.method === "GET" && response.status === 404
         ? "Araç bulunamadı."
-        : response.status === 401
+        : options.method === "GET" && response.status === 401
           ? "Oturum süresi dolmuş. Lütfen tekrar giriş yapın."
-          : "Araç detayları yüklenirken bir hata oluştu.";
+          : fallbackMessage;
 
     let message = defaultMessage;
+    let messages: string[] = [defaultMessage];
 
     try {
-      const data: unknown = await response.json();
+      const data = await response.json();
 
-      if (
-        typeof data === "object" &&
-        data !== null &&
-        "message" in data &&
-        typeof data.message === "string"
-      ) {
+      if (typeof data?.message === "string") {
         message = data.message;
+        messages = [data.message];
+      } else if (
+        Array.isArray(data?.message) &&
+        data.message.length > 0 &&
+        data.message.every(
+          (item: unknown) => typeof item === "string",
+        )
+      ) {
+        messages = data.message;
+        message = messages.join(" ");
       }
     } catch {
-      // JSON olmayan hatalarda varsayılan mesajı koru.
+      // JSON olmayan hata yanıtında varsayılan mesaj kullanılır.
     }
 
-    throw new VehicleApiError(message, response.status);
+    throw new VehicleApiError(
+      message,
+      response.status,
+      messages,
+    );
   }
 
   let data: unknown;
@@ -222,7 +249,10 @@ export async function fetchVehicleById(
   try {
     data = await response.json();
   } catch {
-    throw new VehicleApiError("Araç servisinden geçersiz yanıt alındı.", 502);
+    throw new VehicleApiError(
+      "Araç servisinden geçersiz yanıt alındı.",
+      502,
+    );
   }
 
   if (
@@ -237,8 +267,56 @@ export async function fetchVehicleById(
     !("model" in data) ||
     typeof data.model !== "string"
   ) {
-    throw new VehicleApiError("Araç detayı beklenen biçimde değil.", 502);
+    throw new VehicleApiError(
+      options.method === "GET"
+        ? "Araç detayı beklenen biçimde değil."
+        : "Araç bilgileri beklenen biçimde değil.",
+      502,
+    );
   }
 
-  return data as Vehicle;
+  return data as Omit<Vehicle, "tenantId">;
+}
+
+// Düzenleme formu için mevcut araç bilgilerini getirir.
+export async function fetchVehicle(
+  id: string,
+  signal?: AbortSignal,
+): Promise<Omit<Vehicle, "tenantId">> {
+  return fetchVehicleById(id, signal);
+}
+
+// Yeni araç oluşturur.
+export async function createVehicle(
+  input: CreateVehicleInput,
+): Promise<Omit<Vehicle, "tenantId">> {
+  return requestVehicle(
+    "/api/tenant/vehicles",
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(input),
+    },
+    "Araç oluşturulurken bir hata oluştu.",
+  );
+}
+
+// Mevcut aracın düzenlenebilir bilgilerini günceller.
+export async function updateVehicle(
+  id: string,
+  input: UpdateVehicleInput,
+): Promise<Omit<Vehicle, "tenantId">> {
+  return requestVehicle(
+    `/api/tenant/vehicles/${encodeURIComponent(id)}`,
+    {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(input),
+    },
+    "Araç güncellenirken bir hata oluştu.",
+  );
 }

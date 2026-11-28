@@ -87,7 +87,7 @@ Değişiklikler ayrı bir feature branch'ten PR ile birleştirilmeli.
 <summary>#6 — docs(api): document and verify existing API contracts with OpenAPI</summary>
 
 ```text
-docs(api): document and verify existing API contracts with OpenAPI #6  
+docs(api): document and verify existing API contracts with OpenAPI #6
 Amaç
 Mevcut NestJS API endpoint'lerini incelemek, Swagger/OpenAPI altyapısının durumunu doğrulamak ve frontend geliştirme için güvenilir bir API sözleşmesi oluşturmak.
 
@@ -3217,142 +3217,508 @@ Yeni route, API bağımlılığı ve frontend yeniden başlatma gereksinimleri P
 
 </details>
 
-<details>
-<summary>#61 — F8 — docs(architecture): Tenant Müşteri Yönetimi Domain ve Veri Modeli Tasarımı</summary>
+ <details>
+<summary>#61 — F8 — docs(architecture): Hesapsız Müşteri ve Rezervasyon Domain Tasarımı</summary>
 
-```text
-F8 — docs(architecture): Tenant Müşteri Yönetimi Domain ve Veri Modeli Tasarımı
- #61
+> 28.11.2026 — Hesapsız Rezervasyon ve Takip Sistemi ürün kararı doğrultusunda görev kapsamı değiştirilmiştir. Eski Customer domain görevinin yerini yeni mimari tasarım görevi almıştır.
 
+# F8 — docs(architecture): Hesapsız Müşteri ve Rezervasyon Domain Tasarımı
 
+**Sorumlu:** Mustafa
+**Reviewer:** Eda
+**Branch:** `docs/f8-customer-reservation-domain`
+**Bağımlılık:** F6, mevcut Tenant ve Vehicle mimarisi
+**Tür:** Backend Architecture / Domain Design / Documentation
 
-F8 — docs(architecture): Tenant Müşteri Yönetimi Domain ve Veri Modeli Tasarımı
-Sorumlu: Mustafa
-Branch: docs/f8-customer-domain
-Bağımlılık: F6
-Tür: Backend Architecture / Documentation
+## Amaç
 
-Amaç
-Araç yönetiminden sonra kiralama şirketinin müşteri kayıtlarını güvenli şekilde yönetebilmesi için uygulanabilir bir MVP mimarisi hazırlamak.
+RentACar'ın kalıcı **Hesapsız Rezervasyon ve Takip Sistemi** ürün kararı doğrultusunda müşteri ve rezervasyon domainlerinin sınırlarını, ilişkilerini, veri modellerini ve temel iş kurallarını tasarlamak.
 
-Yapılacaklar
+Bu görevde çalışan müşteri veya rezervasyon sistemi geliştirilmeyecektir. Hedef, sonraki geliştirme serilerinde uygulanabilecek, multi-tenant SaaS mimarisiyle uyumlu ve ekip tarafından anlaşılabilir bir teknik tasarım ortaya koymaktır.
 
-RentACar'daki müşteri kavramını tanımla.
+## 1. Mevcut altyapı ve ürün kararı
 
-Müşteri ile gelecekteki kiralama sürücüsü/ek sürücü kavramlarını ayır.
+RentACar, Next.js ve NestJS tabanlı, PostgreSQL ve Prisma kullanan multi-tenant araç kiralama SaaS platformudur.
 
-Tenant sahipliğini ve müşteri kayıtlarının erişim sınırlarını belirle.
+Mevcut Platform Admin ve Tenant Admin authentication sistemleri, tenant izolasyonu ve Vehicle CRUD altyapısı korunacaktır.
 
-MVP için gerekli müşteri alanlarını ve opsiyonel alanları sınıflandır.
+**Kalıcı ürün kararı:**
 
-Kimlik, ehliyet ve hassas kişisel veri gereksinimlerinin gerçekten gerekli olup olmadığını değerlendir.
+- Müşteriler web sitesi veya mobil uygulama üzerinden hesap oluşturmadan rezervasyon yapacaktır.
+- Müşteriler için login, registration, password, JWT, refresh token veya authentication session bulunmayacaktır.
+- Hesapsız rezervasyon geçici bir Guest Booking özelliği olarak tanımlanmayacaktır.
+- Müşteri rezervasyonu oluşturduğunda takip kodu alacak, rezervasyonu başlangıçta `PENDING` olacaktır.
+- Tenant Admin rezervasyonu inceleyerek onaylayacak veya reddedecektir.
+- Müşteri aynı takip koduyla rezervasyonunun durumunu sorgulayacaktır.
+- Müşteri tarafında SMS, OTP veya e-posta doğrulaması bulunmayacaktır.
+- İlk sürümde online ödeme bu mimarinin uygulama kapsamına dahil değildir.
 
-Gereksiz hassas veri toplama.
+## 2. Yapılacaklar
 
-Müşteri arama, listeleme, oluşturma ve düzenleme senaryolarını tasarla.
+### 2.1 Customer domain
 
-Silme/arşivleme ve gelecekteki kiralama geçmişi ilişkilerini değerlendir.
+- Customer kavramını Platform Admin ve Tenant Admin gibi authentication kullanıcılarından kesin olarak ayır.
+- Customer'ın Tenant'a ait ticari/iletişim kaydı olmasını tasarla.
+- Ad, soyad ve telefon gibi temel alanları belirle.
+- E-posta, doğum tarihi ve diğer opsiyonel alanları değerlendir.
+- Kimlik numarası ve ehliyet bilgilerinin MVP'de gerçekten gerekli olup olmadığını araştır; gereksiz kişisel veri toplamaktan kaçın.
+- Telefon numarası ve e-posta normalizasyonunu tasarla.
+- Aynı kişinin birden fazla rezervasyon oluşturmasını destekleyecek ilişki modelini belirle.
+- Aynı telefon numarasının doğrulanmış kimlik kanıtı olmadığını dikkate al; otomatik müşteri birleştirme risklerini değerlendir.
+- Müşteri kayıtlarının listeleme, arama ve ileride düzenleme ihtiyaçlarını belirle.
+- Arşivleme, silme, anonimleştirme ve saklama yaklaşımını belgele.
+- Customer ile Driver ve AdditionalDriver gibi gelecekteki kavramların farkını açıkla.
 
-Prisma model taslağı, indeks ve unique kararlarını belgele.
+### 2.2 Reservation domain
 
-API sözleşmesini ve örnek response'ları tanımla.
+- Reservation varlığının sorumluluğunu tanımla.
+- Tenant, Customer, Vehicle ve Reservation arasındaki ilişkileri tasarla.
+- Rezervasyon başlangıç/bitiş tarihleri ile alış/iade saatlerini belirle.
+- Alış ve iade konumlarının farklı olabilmesini değerlendir.
+- Uçuş kodu gibi rezervasyona özgü opsiyonel bilgileri belirle.
+- Rezervasyonun kendi sistem içi kimliğini ve müşteri takip kodunu birbirinden ayır.
+- `PENDING`, `CONFIRMED` ve `REJECTED` durumlarını veri modeli seviyesinde tanımla.
+- Oluşturulma, onaylanma ve reddedilme zamanlarının saklanmasını değerlendir.
+- Rezervasyon sırasında alınan müşteri ve fiyat bilgilerinin tarihsel olarak korunmasını tasarla.
+- Rezervasyon ile gerçek kiralama sözleşmesi/teslim işleminin farklı domainler olduğunu açıkla.
+- Belirli fiziksel araç üzerinden rezervasyon ile araç kategorisi üzerinden rezervasyon seçeneklerini karşılaştır; MVP yaklaşımını öner.
 
-Eda ile frontend alanlarının uygunluğunu değerlendir.
-Öğrenme hedefleri
-Domain-driven design temelleri, veri minimizasyonu, ilişkisel modelleme, API sözleşmesi ve kişisel verilerin korunmasına yönelik mühendislik yaklaşımı.
+### 2.3 Location / Branch domain
 
-Kabul kriterleri
+- Mevcut `Vehicle.currentLocationLabel` alanının sınırlarını incele.
+- Tenant'a ait şube, havalimanı ve teslimat noktası ihtiyacını değerlendir.
+- Alış/iade konumları için önerilen model ve ilişkileri hazırla.
+- Rezervasyon tarihindeki konum bilgisinin korunması gereksinimini incele.
+- MVP'de hangi konum özelliklerinin uygulanacağını, hangilerinin erteleneceğini belirle.
 
-Müşteri domain sınırları açıklanmış.
+### 2.4 Extra Services domain
 
-MVP alanları ve ertelenen özellikler belirlenmiş.
+- Bebek koltuğu, ek sürücü, navigasyon gibi seçilebilir hizmetleri modelle.
+- Aracın mevcut teknik özellikleri ile ücretli ek hizmetleri ayır.
+- Hizmetlerin Tenant'a özel tanımlanmasını tasarla.
+- Sabit ücret ve günlük ücret yaklaşımlarını değerlendir.
+- Ek hizmet kataloğu ile rezervasyonda seçilmiş hizmetlerin kayıtlarını ayır.
+- Hizmet fiyatları değiştiğinde önceki rezervasyonların etkilenmemesini sağlayacak veri modelini öner.
+- Miktar, kullanılabilirlik ve gelecekteki stok yönetimi ihtiyaçlarını değerlendir.
 
-Tenant izolasyonu tasarlanmış.
+### 2.5 Pricing domain
 
-API sözleşmesi hazırlanmış.
+- Mevcut Vehicle fiyat alanlarını incele.
+- Araç bedeli, ek hizmetler, depozito, para birimi ve toplam tutar ayrımını tanımla.
+- Rezervasyon anındaki fiyatların snapshot olarak korunmasını tasarla.
+- PostgreSQL/Prisma `Decimal` ve API tarafında decimal string kullanımını değerlendir.
+- Günlük fiyat hesaplamasının sınırlarını ve belirsiz iş kurallarını açıkla.
+- Gelecekteki dinamik fiyatlandırma ve kampanya sistemlerini MVP dışında tut.
 
-Hassas veri ve saklama riskleri açıklanmış.
+## 3. Veri modeli tasarımı
 
-Mimari ekip tarafından gözden geçirilmiş.
-Kapsam dışı
-Bu issue müşteri Prisma migration'ı, çalışan API veya frontend sayfası oluşturmaz.
+Önerilen her yeni model için aşağıdaki kararları belgeleyerek uygulanabilir Prisma taslakları hazırla:
 
-PR / Local Setup / Team Actions
-Dokümantasyon dışında kurulum değişikliği beklenmiyor.
-```
+- Modelin amacı ve domain sahipliği
+- Alan adları, türleri ve zorunlulukları
+- Nullable alanlar ve varsayılan değerler
+- Tenant ilişkisi ve erişim sınırları
+- Primary key, foreign key, unique ve index kararları
+- Silme, arşivleme ve referential integrity davranışları
+- Tarihsel snapshot ihtiyaçları
+- Veri minimizasyonu ve saklama riskleri
+- Alternatifler, trade-off'lar ve açık kararlar
+
+Özellikle tenant sahipliğinin Customer ve Reservation üzerinden nasıl korunacağını, farklı tenant'lara ait kayıtların yanlış ilişkilendirilmesinin veri katmanında nasıl engellenebileceğini değerlendir.
+
+ER diyagramı ve önerilen Prisma model taslaklarını doküman içerisinde sun. **Gerçek `schema.prisma` dosyasını değiştirme.**
+
+## 4. Mimari dokümantasyon
+
+Oluşturulacak dosya:
+
+`docs/architecture/customer-reservation-domain.md`
+
+Doküman en az şu bölümleri içermelidir:
+
+1. Amaç ve kalıcı ürün kararları
+2. Mevcut sistemle ilişkiler
+3. Domain sınırları ve terminoloji
+4. Customer veri modeli
+5. Reservation veri modeli
+6. Location/Branch seçenekleri
+7. Extra Services tasarımı
+8. Pricing ve snapshot yaklaşımı
+9. ER diyagramı ve Prisma taslakları
+10. Tenant izolasyonu ve kişisel veri sınırları
+11. MVP / future scope ayrımı
+12. Alternatifler, açık kararlar ve riskler
+13. F9 ve sonraki uygulama görevlerine aktarılan gereksinimler
+
+## 5. Öğrenme hedefleri
+
+- Domain-driven design ve bounded context
+- Relational database modeling
+- Prisma ilişkileri, unique ve index tasarımı
+- Multi-tenant veri izolasyonu
+- Veri minimizasyonu ve kişisel veri yaşam döngüsü
+- Tarihsel veri bütünlüğü ve snapshot yaklaşımı
+- Alternatif tasarımların teknik karşılaştırması
+
+Kararlar yalnızca belgelenmemeli; neden seçildikleri ve hangi alternatiflerin elendiği de açıklanmalıdır.
+
+## 6. Kabul kriterleri
+
+- [ ] Hesapsız rezervasyon yaklaşımı kalıcı ürün kararı olarak belgelenmiş.
+- [ ] Customer kavramı authentication kullanıcılarından ayrılmış.
+- [ ] Tenant, Customer, Reservation ve Vehicle ilişkileri tanımlanmış.
+- [ ] Müşteri alanları zorunlu/opsiyonel olarak sınıflandırılmış.
+- [ ] Gereksiz kimlik, ehliyet ve hassas verilerin toplanması önlenmiş.
+- [ ] Tekrarlanan müşteri kayıtları için yaklaşım tasarlanmış.
+- [ ] Müşteri verilerinin saklama, arşivleme ve anonimleştirme riskleri açıklanmış.
+- [ ] Rezervasyon snapshot yaklaşımı belirlenmiş.
+- [ ] Alış/iade konumu ve şube ihtiyaçları değerlendirilmiş.
+- [ ] Ek hizmet domaini ve fiyatlandırma ilişkileri tanımlanmış.
+- [ ] Prisma taslakları, indeksler, ilişkiler ve ER diyagramı hazırlanmış.
+- [ ] Tenant izolasyonu ve veri bütünlüğü kuralları belgelenmiş.
+- [ ] MVP ve sonraki geliştirmeler ayrılmış.
+- [ ] F9'a devredilecek açık iş kuralları belirlenmiş.
+- [ ] Doküman Eda'nın teknik incelemesine sunulmuş.
+- [ ] `PROJECT_STATUS.md` ilgili görev bilgileriyle güncellenmiş.
+
+## 7. Kapsam dışı
+
+- Gerçek Prisma schema değişiklikleri ve migration
+- Çalışan Customer veya Reservation API'leri
+- Customer CRUD implementasyonu
+- Rezervasyon oluşturma veya takip kodu implementasyonu
+- Public web sitesi veya mobil uygulama
+- Yönetim paneli ekranları
+- Authentication sisteminin değiştirilmesi
+- E-posta worker geliştirmesi
+- Ödeme altyapısı
+
+## 8. Bağımlılıklar
+
+- C1–C10 Tenant authentication ve isolation mimarisi
+- F1–F6 Vehicle domain ve API altyapısı
+- Güncel `schema.prisma`
+- `docs/architecture/tenant-authentication.md`
+- `docs/architecture/vehicle-management.md`
+- `docs/api/vehicle-api-contract.md` veya projedeki güncel karşılığı
+
+F7 ve Eda'nın G5–G9 çalışmaları incelenebilir ancak kodlarına müdahale edilmeyecektir.
+
+## 9. PR / Local Setup / Team Actions
+
+- Bu görev ayrı dokümantasyon branch'inde ve ayrı PR ile tamamlanacaktır.
+- PR'da mimari karar özeti, açık sorular ve F9 bağımlılıkları belirtilecektir.
+- Kod değişikliği, migration, yeni bağımlılık veya `.env` değişikliği beklenmemektedir.
+- Mimari taslakların mevcut kodla uyumluluğu kontrol edilecektir.
+- `ISSUE_HISTORY.md` içindeki kapsam değişikliğinin geçmişi korunacaktır.
+- Güncel `main` üzerinden ekip durumları doğrulanacak ve Eda'nın kayıtları korunacaktır.
+
+**Teslimat:** İncelenebilir ve sonraki geliştirmelere referans olabilecek `customer-reservation-domain.md` dokümanı.
+
+**Not:** F8 yalnızca mimari tasarım ve dokümantasyon görevidir; çalışan sistem geliştirilmez.
 
 </details>
 
 <details>
-<summary>#62 — F9 — feature(api): Tenant Customer Modeli ve Temel Müşteri API'leri</summary>
+<summary>#62 — F9 — docs(architecture): Rezervasyon Yaşam Döngüsü, Güvenli Takip ve API Sözleşmeleri</summary>
 
-```text
-F9 — feature(api): Tenant Customer Modeli ve Temel Müşteri API'leri
- #62
+> 28.11.2026 — Önceki Customer modeli ve API implementasyonu görevi, yeni rezervasyon mimarisi kararı doğrultusunda mimari tasarım ve dokümantasyon görevine dönüştürülmüştür.
 
+# F9 — docs(architecture): Rezervasyon Yaşam Döngüsü, Güvenli Takip ve API Sözleşmeleri
 
+**Sorumlu:** Mustafa
+**Reviewer:** Eda
+**Branch:** `docs/f9-reservation-lifecycle-api`
+**Bağımlılık:** F8
+**Tür:** Backend Architecture / API Design / Security / Documentation
 
-F9 — feature(api): Tenant Customer Modeli ve Temel Müşteri API'leri
-Sorumlu: Mustafa
-Branch: feature/f9-tenant-customer-foundation
-Bağımlılık: F8
-Tür: Backend / Database / API
+## Amaç
 
-Amaç
-F8'de onaylanan müşteri modeliyle Tenant'a özel müşteri kaydı oluşturma, listeleme ve detay görüntüleme altyapısını geliştirmek.
+F8'de belirlenen Customer ve Reservation domain mimarisi üzerine RentACar'ın kalıcı Hesapsız Rezervasyon ve Takip Sistemi için uygulanabilir iş akışlarını, rezervasyon yaşam döngüsünü, araç müsaitliği kurallarını, takip kodu güvenliğini, API sözleşmelerini ve bildirim mimarisini tasarlamak.
 
-Kapsam
-Prisma Customer modeli ve Tenant ilişkisi.
-GET /tenant/customers
-GET /tenant/customers/:id
-POST /tenant/customers
-Bu rotalar F8'de kesinleştirilecek; burada öneri olarak yer alıyor.
+Bu görev rezervasyon altyapısının implementasyonu değildir. Hedef; sonraki görevlerde backend, frontend ve mobil uygulamanın aynı sözleşmeye göre geliştirilmesini sağlayacak, güvenliği ve veri bütünlüğünü önceden ele alan ayrıntılı bir teknik doküman hazırlamaktır.
 
-Yapılacaklar
+## 1. Mevcut altyapı ve ürün kuralları
 
-F8'de onaylanan veri modelini Prisma'ya aktar.
+- RentACar multi-tenant ve white-label SaaS platformudur.
+- Platform Admin ve Tenant Admin authentication altyapısı korunacaktır.
+- Customer bir authentication hesabı değildir.
+- Müşteriler hesap oluşturmadan rezervasyon yapacak ve takip koduyla sorgulayacaktır.
+- Müşteri için JWT, session, SMS, OTP veya e-posta doğrulaması tasarlanmayacaktır.
+- Rezervasyon oluşturulduğunda başlangıç durumu `PENDING` olacaktır.
+- Tenant Admin rezervasyonu onaylayabilecek (`CONFIRMED`) veya reddedebilecektir (`REJECTED`).
+- Yeni rezervasyon Tenant Admin panelinde görünecek ve kayıtlı tenant yönetici adresine e-posta bildirimi gönderilmesi planlanacaktır.
+- Takip kodu tek başına sınırlı public rezervasyon sorgulaması için yeterli olacaktır.
+- İlk sürümde online ödeme entegrasyonu bu görev kapsamında uygulanmayacaktır.
 
-Migration oluştur ve test veritabanında doğrula.
+F8'de onaylanan modeller, ilişki kuralları ve veri minimizasyonu kararları esas alınacaktır.
 
-Customer modülü, service ve controller katmanlarını oluştur.
+## 2. Yapılacaklar
 
-Tenant kimliğini sunucu tarafındaki oturumdan al.
+### 2.1 Reservation lifecycle
 
-Müşteri ekleme DTO'sunu ve validation kurallarını yaz.
+Aşağıdaki temel durumların anlamlarını tanımla:
 
-Listeleme ve arama için sınırlı pagination uygula.
+- `PENDING`: Oluşturulmuş, tenant onayı bekleyen rezervasyon talebi.
+- `CONFIRMED`: Tenant tarafından kabul edilmiş rezervasyon.
+- `REJECTED`: Tenant tarafından reddedilmiş rezervasyon.
 
-Müşteri detayında Tenant sahipliğini zorunlu kıl.
+Şu konuları tasarla:
 
-Başka Tenant'ın müşteri ID'si için bilgi sızdırmayan 404 döndür.
+- Durum geçiş diyagramı ve izin verilen geçişler
+- Onay/red işlemlerinin yetki sınırları
+- Geçersiz durum geçişlerine verilecek yanıtlar
+- Tekrarlanan onay veya red isteklerinin davranışı
+- Aynı anda gelen onay/red talepleri
+- Uzun süre bekleyen rezervasyonların yaşam döngüsü
+- İptal ve süre aşımı durumlarına MVP'de ihtiyaç olup olmadığı
+- Durum değişikliklerinin audit/history kayıtları
+- Kararı veren Tenant Admin ve karar zamanının kaydı
+- Rezervasyonun gerçek kiralama, araç teslimi ve iade işlemlerinden ayrılması
 
-Hassas verilerin gereksiz loglanmasını önle.
+Gereksiz durumlar ekleme. Ek status değerleri ancak gerçek iş ihtiyacıyla gerekçelendirilmelidir.
 
-Swagger ve testleri ekle.
+### 2.2 Vehicle availability ve concurrency
 
-Yeni migration ve API sözleşmesini proje durum dosyasına işle.
-Öğrenme hedefleri
-Prisma ilişki modelleme, NestJS modüler mimari, DTO, authorization, test edilebilir service yapısı ve kişisel veri güvenliği.
+- `FleetStatus.ACTIVE` ile tarih aralığına bağlı müsaitliğin farklı kavramlar olduğunu koru.
+- Başlangıç ve bitiş tarih/saatlerinin doğrulama kurallarını belirle.
+- Tarih aralıklarının çakışma mantığını açıkla.
+- UTC saklama, yerel saat ve zaman dilimi dönüşümlerini değerlendir.
+- `PENDING` rezervasyonların araç müsaitliğine etkisini tartış.
+- `CONFIRMED` rezervasyonlarla çakışan yeni onayların engellenmesi için uygulanabilir strateji seç.
+- Eş zamanlı tenant onaylarında yarış durumlarını incele.
+- PostgreSQL transaction, locking, isolation seviyeleri ve uygun veritabanı constraint seçeneklerini karşılaştır.
+- Yalnız uygulama seviyesindeki availability kontrolünün neden yeterli olmayabileceğini açıkla.
+- Rezervasyon oluşturma ile kesin onay anındaki müsaitlik kontrolünü birbirinden ayır.
+- İleride kiralama, bakım veya bloke dönemlerinin müsaitliğe nasıl dahil olacağını sınırlarıyla açıkla.
 
-Kabul kriterleri
+Başlangıç önerisi: `PENDING` talepler aracın kesin rezervasyonunu oluşturmaz; ancak `CONFIRMED` durumuna geçmeden önce transaction güvenliğiyle çakışma denetimi yapılır. Bu öneri ekip incelemesinde karara bağlanmalıdır.
 
-Tenant'a özel müşteri kayıtları saklanıyor.
+### 2.3 Secure reservation tracking
 
-Listeleme ve detay API'leri doğru Tenant ile sınırlı.
+Müşterinin hesabı veya ek doğrulaması olmadan takip koduyla rezervasyon durumunu sorgulayabileceği güvenli bir mimari tasarla.
 
-Farklı Tenant müşterilerine erişilemiyor.
+Değerlendirilecek konular:
 
-DTO doğrulaması çalışıyor.
+- Kriptografik olarak güvenli rastgele takip kodu üretimi
+- Kod uzunluğu, entropy ve tahmin edilebilirlik
+- Benzersizlik kontrolü ve collision davranışı
+- Kodların hash veya diğer güvenli yöntemlerle saklanması
+- Tenant Admin tarafından kodla arama yapılabilmesi
+- Public sorgulama endpoint tasarımı
+- Rate limiting ve otomatik kod deneme saldırılarına karşı önlemler
+- Takip kodunun URL, log, analytics, referrer ve hata raporlarına sızmasının önlenmesi
+- Takip kodlarının gerektiğinde yenilenmesi veya iptali
+- Kodunu kaybeden müşteri için destek süreci
+- Kodun kullanılabilirlik süresi ve kişisel veri saklama sınırları
+- Geçersiz kodlarda güvenli hata davranışı
 
-Migration ve backend testleri başarılı.
+**Kesin kural:** Takip kodu bir müşteri hesabı, JWT veya authentication session değildir.
 
-Backend lint, TypeScript ve build başarılı.
-Kapsam dışı
-Müşteri düzenleme/silme, sürücü doğrulama, rezervasyon, sözleşme, ödeme ve ehliyet dosyası yükleme. Bunlar sonraki geliştirme serisinde ele alınacak.
+Takip kodunu bilen kişi yalnızca ilgili rezervasyonun public takip görünümüne erişebilir.
 
-PR / Local Setup / Team Actions
-Yeni migration, Prisma Client üretimi, veritabanı kurulum ve backend yeniden başlatma gereksinimlerini açıkça belirt.
-```
+Public görünümde öncelikli bilgiler:
+
+- Rezervasyon durumu
+- Araç için sınırlı tanımlayıcı bilgiler
+- Alış/iade tarih ve saatleri
+- Rezervasyonun onaylanıp onaylanmadığı
+- Ürün kararı doğrultusunda gösterilmesine izin verilen diğer sınırlı bilgiler
+
+Telefon numarası, doğum tarihi, kimlik/ehliyet bilgileri ve diğer gereksiz kişisel veriler public response içinde gösterilmemelidir.
+
+### 2.4 Tenant resolution ve authorization
+
+- Public web veya mobil uygulamanın doğru tenant'ı nasıl belirleyeceğini tasarla.
+- Mevcut Tenant slug yapısını değerlendir.
+- Subdomain ve gelecekte custom domain kullanımını incele.
+- Public tenant seçimini Tenant Admin authentication mekanizmasından ayrı ele al.
+- Public rezervasyon sırasında tenant, vehicle, location ve extra service ilişkilerinin doğrulanmasını tasarla.
+- Client tarafından gönderilen `tenantId`, fiyat ve availability verilerinin doğrudan güvenilir olmadığını belgele.
+- Sunucu tarafında tenant çözümleme ve fiyat hesaplama sınırlarını tanımla.
+- Tenant Admin işlemlerinde mevcut `TenantJwtAuthGuard` ve güvenilir tenant context yaklaşımını koru.
+- Cross-tenant rezervasyon görüntüleme ve onaylama girişimlerini engelleyecek sorgu kurallarını belirle.
+- Public tracking kodlarının başka bir tenant bağlamında sızdırılma riskini değerlendir.
+
+### 2.5 API contract design
+
+Gelecekte uygulanacak public ve Tenant Admin API sözleşmelerini tasarla.
+
+**Public API tasarım konuları:**
+
+- Tenant'a ait halka açık bilgileri görüntüleme
+- Alış/iade konumlarını listeleme
+- Tarih aralığına göre uygun araç sorgulama
+- Araç ve ek hizmet detaylarını görüntüleme
+- Sunucu tarafında rezervasyon fiyatı hesaplama
+- Hesapsız rezervasyon oluşturma
+- Takip koduyla rezervasyon durumunu sorgulama
+
+**Tenant Admin API tasarım konuları:**
+
+- Tenant rezervasyonlarını listeleme
+- Rezervasyon detayını görüntüleme
+- Takip koduyla tenant içi rezervasyon arama
+- Rezervasyonu onaylama
+- Rezervasyonu reddetme
+- Yetkili müşteri kayıtlarını görüntüleme
+- Gelecekte ek hizmet kataloğunu yönetme
+
+Her önerilen API için:
+
+- HTTP method ve route
+- İş amacı
+- Authentication / authorization koşulları
+- Tenant resolution yöntemi
+- Request DTO ve validation
+- Response örnekleri
+- Hata kodları ve güvenli hata mesajları
+- Public ve Tenant Admin veri görünürlüğü
+- Pagination, filtering ve sorting ihtiyaçları
+- Idempotency yaklaşımı
+- Transaction ve concurrency davranışı
+- Fiyat, tarih ve tenant ownership doğrulamaları
+- Güvenlik test senaryoları
+
+belgelenmelidir.
+
+OpenAPI/Swagger ile ileride uygulanabilecek tutarlı bir sözleşme hedeflenmelidir. Bu aşamada controller, DTO veya çalışan endpoint oluşturulmayacaktır.
+
+### 2.6 Reservation notification architecture
+
+Rezervasyon oluşturulduğunda ilgili tenant yöneticisinin panelinde kayıt görüntülenebilmesi ve kayıtlı e-posta adresine bildirim gönderilmesi için mimari tasarla.
+
+- Mevcut `InvitationDelivery` ve transactional outbox yaklaşımını incele.
+- Hesap aktivasyon bildirimleriyle rezervasyon bildirimlerinin farkını değerlendir.
+- Ortak delivery altyapısının nasıl genişletilebileceğini karşılaştır.
+- Rezervasyon kaydı ve kalıcı bildirim gönderme niyetinin tutarlılığını tasarla.
+- E-posta gönderimini veritabanı transaction'ı dışında tut.
+- Bildirim gönderimi başarısız olsa bile rezervasyon kaydını koru.
+- Retry, duplicate delivery ve idempotency davranışını tasarla.
+- Yönetici adresi değiştiğinde alıcının belirlenme politikasını değerlendir.
+- Bildirim e-postalarına eklenecek kişisel verileri sınırlandır.
+- Panel bildirimlerinin veri kaynağı ve okunma durumu ihtiyacını değerlendir.
+
+Mevcut çalışan davet/aktivasyon e-posta sistemi değiştirilmemelidir.
+
+### 2.7 Security ve testing strategy
+
+Gelecekteki implementasyon görevleri için güvenlik ve regresyon test planı hazırla.
+
+Özellikle:
+
+- Cross-tenant reservation access
+- Public endpoint abuse
+- Tahmin edilemeyen takip kodları
+- Geçersiz ve sızdırılmış takip kodları
+- Rate limiting ve brute-force
+- Sahte tenant/vehicle/location/extra service değerleri
+- Manipüle edilmiş fiyat ve tutarlar
+- Çakışan rezervasyon tarihleri
+- Concurrent confirmation
+- Duplicate reservation submission
+- Tekrarlanan onay ve red işlemleri
+- Geçersiz state transition
+- E-posta gönderimi ve retry hataları
+- Tarihsel müşteri ve fiyat snapshot'larının korunması
+- Public response kişisel veri sızıntıları
+- Mevcut Tenant authentication ve Vehicle CRUD regresyonları
+
+Test senaryolarının amacı, gerekli veriler ve beklenen davranışları belgelenmelidir. Bu görevde çalışan entegrasyon veya E2E testleri yazılması beklenmemektedir.
+
+## 3. Mimari dokümantasyon
+
+Oluşturulacak dosya:
+
+`docs/architecture/reservation-lifecycle-and-api.md`
+
+Doküman en az şu bölümleri içermelidir:
+
+1. Amaç ve kapsam
+2. F8 domain tasarımıyla ilişki
+3. Rezervasyon yaşam döngüsü ve durum geçiş diyagramı
+4. Araç müsaitliği ve zaman aralığı kuralları
+5. Concurrency ve transaction stratejisi
+6. Takip kodu güvenlik modeli
+7. Tenant resolution ve yetkilendirme
+8. Public API sözleşmeleri
+9. Tenant Admin API sözleşmeleri
+10. Bildirim ve transactional outbox yaklaşımı
+11. Güvenlik ve regresyon test planı
+12. Açık mimari kararlar, alternatifler ve riskler
+13. Sonraki implementasyon görevleri ve bağımlılıklar
+
+## 4. Öğrenme hedefleri
+
+- API-first design ve OpenAPI
+- State machine ve domain lifecycle
+- PostgreSQL transaction ve isolation
+- Race condition ve concurrency control
+- Kriptografik token güvenliği
+- Capability-based erişim sınırları
+- Multi-tenant authorization
+- Idempotency ve retry mekanizmaları
+- Transactional outbox ve eventual consistency
+- Güvenlik test stratejisi
+
+Her önemli teknik karar için alternatifler karşılaştırılmalı, seçilen yöntemin gerekçesi açıklanmalıdır.
+
+## 5. Kabul kriterleri
+
+- [ ] Rezervasyon durumları ve izin verilen geçişler tanımlanmış.
+- [ ] PENDING rezervasyonların araç müsaitliğine etkisi karara bağlanmış.
+- [ ] Tarih/saat çakışma ve availability yaklaşımı açıklanmış.
+- [ ] Eş zamanlı onayların veri bütünlüğünü bozmasını önleyen uygulanabilir transaction/concurrency stratejisi seçilmiş.
+- [ ] Takip kodunun üretimi, güvenliği, saklanması ve sorgulanması tasarlanmış.
+- [ ] SMS, OTP veya müşteri hesabı olmadan sorgulama yaklaşımı korunmuş.
+- [ ] Public ve Tenant Admin veri görünürlüğü ayrılmış.
+- [ ] Public tracking response kişisel veri sınırları belirlenmiş.
+- [ ] Tenant resolution ve cross-tenant güvenlik kuralları tanımlanmış.
+- [ ] Public rezervasyon API sözleşmeleri hazırlanmış.
+- [ ] Tenant Admin rezervasyon yönetimi API sözleşmeleri hazırlanmış.
+- [ ] DTO, validation, response, hata ve idempotency kuralları açıklanmış.
+- [ ] E-posta bildirimleri için güvenilir delivery yaklaşımı tasarlanmış.
+- [ ] Güvenlik ve regresyon test planı hazırlanmış.
+- [ ] F8 dokümanıyla çelişen karar bulunmadığı doğrulanmış.
+- [ ] Gelecekteki geliştirme görevlerine aktarılacak işler tanımlanmış.
+- [ ] Mimari Eda'nın incelemesine sunulmuş.
+- [ ] `PROJECT_STATUS.md` ilgili görev bilgileriyle güncellenmiş.
+
+## 6. Kapsam dışı
+
+- Gerçek Prisma schema veya migration değişiklikleri
+- Çalışan Customer / Reservation modülleri
+- Public veya Tenant Admin API implementasyonu
+- Gerçek takip kodu üretim sistemi
+- Gerçek e-posta worker veya bildirim sistemi
+- Frontend/mobil rezervasyon ekranları
+- Online ödeme entegrasyonu
+- Mevcut authentication altyapısının yeniden yazılması
+- Gerçek E2E veya entegrasyon testleri
+
+## 7. Bağımlılıklar
+
+- Tamamlanmış ve incelenmiş F8 mimari dokümanı
+- C serisi Tenant authentication ve isolation altyapısı
+- F1–F6 Vehicle API ve veri modeli
+- Mevcut Prisma schema ve güncel API sözleşmeleri
+- Transactional outbox ve tenant davet mimarisi
+
+Eda'nın aktif G serisi geliştirmelerine müdahale edilmeyecektir.
+
+## 8. PR / Local Setup / Team Actions
+
+- F9 için F8'den ayrı branch ve PR kullanılacaktır.
+- PR açıklamasına state machine, API sözleşmesi, concurrency, güvenlik ve bildirim kararlarının özeti eklenecektir.
+- Kod, migration, dependency veya `.env` değişikliği beklenmemektedir.
+- Güncel `main`, F8 dokümanı ve mevcut authentication/Vehicle davranışıyla uyumluluk doğrulanacaktır.
+- Eda'nın ekip durumu ve çalışmaları korunacaktır.
+- Dokümandaki öneriler uygulanmış özellikler olarak sunulmayacaktır.
+- Gelecekteki uygulama işleri bu PR içinde gerçekleştirilmeden, ayrı görev bağımlılıkları olarak belgelenecektir.
+
+**Teslimat:** Sonraki backend ve frontend geliştirmelerinde temel alınabilecek `reservation-lifecycle-and-api.md` mimari ve API sözleşmesi dokümanı.
+
+**Not:** F9 yalnızca mimari tasarım ve dokümantasyon görevidir; çalışan rezervasyon sistemi bu görev kapsamında geliştirilmez.
 
 </details>
 

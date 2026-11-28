@@ -61,8 +61,8 @@ GitHub issue numarası sırasıyla; numara boşlukları PR veya aktarılmamış 
 | [#58](https://github.com/molmezses/RentACar/issues/58) | F5   | Araç güncelleme API                                                    | Done         |
 | [#59](https://github.com/molmezses/RentACar/issues/59) | F6   | Vehicle CRUD izolasyonu ve E2E                                         | Done         |
 | [#60](https://github.com/molmezses/RentACar/issues/60) | F7   | Araç detay sayfası                                                     | Done         |
-| [#61](https://github.com/molmezses/RentACar/issues/61) | F8   | Müşteri domain tasarımı                                                | In Progress  |
-| [#62](https://github.com/molmezses/RentACar/issues/62) | F9   | Customer modeli ve temel API                                           | Backlog      |
+| [#61](https://github.com/molmezses/RentACar/issues/61) | F8   | Hesapsız müşteri ve rezervasyon domain tasarımı                        | In Progress  |
+| [#62](https://github.com/molmezses/RentACar/issues/62) | F9   | Rezervasyon yaşam döngüsü, güvenli takip ve API sözleşmeleri           | Backlog      |
 | [#63](https://github.com/molmezses/RentACar/issues/63) | G1   | Araç sayfalarını Tenant paneline taşıma                                | Done         |
 | [#64](https://github.com/molmezses/RentACar/issues/64) | G2   | Create/edit form UX                                                    | Done         |
 | [#65](https://github.com/molmezses/RentACar/issues/65) | G3   | Gerçek listeleme API entegrasyonu                                      | Done         |

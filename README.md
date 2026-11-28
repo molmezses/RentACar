@@ -16,15 +16,15 @@ The project is not yet production-ready. Customer management, reservations, date
 
 ## Technology stack
 
-| Layer | Technology |
-|---|---|
-| Web | Next.js 16, React 19, TypeScript, Tailwind CSS 4 |
-| API | NestJS 12, TypeScript, REST, Swagger/OpenAPI |
-| Persistence | PostgreSQL, Prisma 7 |
-| Authentication | JWT, Argon2, HttpOnly cookies |
-| Invitation delivery | PostgreSQL transactional outbox, Nodemailer |
-| Testing | Vitest, Supertest, React Testing Library |
-| Tooling | Node.js, npm, Docker Compose, Git/GitHub, ESLint, Oxlint |
+| Layer               | Technology                                               |
+| ------------------- | -------------------------------------------------------- |
+| Web                 | Next.js 16, React 19, TypeScript, Tailwind CSS 4         |
+| API                 | NestJS 12, TypeScript, REST, Swagger/OpenAPI             |
+| Persistence         | PostgreSQL, Prisma 7                                     |
+| Authentication      | JWT, Argon2, HttpOnly cookies                            |
+| Invitation delivery | PostgreSQL transactional outbox, Nodemailer              |
+| Testing             | Vitest, Supertest, React Testing Library                 |
+| Tooling             | Node.js, npm, Docker Compose, Git/GitHub, ESLint, Oxlint |
 
 See the application package manifests and lockfiles for exact dependency versions.
 
@@ -77,8 +77,8 @@ Prerequisites: Git, Node.js 24 (recommended), npm, Docker Desktop with Compose, 
 
 Follow [SETUP.md](SETUP.md) for configuration, dependencies, database migrations, and application startup. Never commit secrets or use production credentials in local development. Use an isolated test database for database integration and E2E tests.
 
-Local web: http://localhost:3000  
-Local API: http://localhost:3001  
+Local web: http://localhost:3000
+Local API: http://localhost:3001
 Swagger UI: http://localhost:3001/api
 
 ## Development and project status
@@ -94,7 +94,16 @@ Some architecture documents describe historical proposals; verify implementation
 
 ## Roadmap
 
-Current focus: vehicle API security and frontend integration, vehicle detail and fleet summaries, and regression testing. Customer domain design and initial APIs are queued. Reservation, pricing and rental workflows, media, branding, production hardening, CI/CD, deployment and recovery remain future work or require further verification.
+- Complete vehicle management and frontend integration.
+- Design the accountless customer and reservation domain.
+- Define reservation lifecycle, secure tracking codes, availability rules, and API contracts.
+- Implement accountless reservation creation and tracking.
+- Implement tenant-side reservation approval and rejection workflows.
+- Introduce location management, extra services, and reservation pricing.
+- Expand rental operations, reporting, branding, and custom domain support.
+- Strengthen production security, CI/CD, deployment, and monitoring.
+
+RentACar follows a permanent accountless reservation model. Customers will be able to create reservations and track their status using a secure tracking code without creating an account or signing in.
 
 ## Security
 
